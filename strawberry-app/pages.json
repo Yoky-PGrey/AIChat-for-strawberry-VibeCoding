@@ -1,0 +1,39 @@
+{
+	"pages": [{
+			"path": "pages/home/home",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/chat/chat",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/history/history",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/settings/settings",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		}
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "black",
+		"navigationBarBackgroundColor": "#FFFFFF",
+		"backgroundColor": "#FDF6F0"
+	},
+	"tabBar": {
+		"custom": true,
+		"color": "#999999",
+		"selectedColor": "#FF6B35",
+		"backgroundColor": "#FFFFFF",
+		"borderStyle": "white"
+	}
+}

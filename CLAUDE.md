@@ -65,9 +65,9 @@ DeepSeek 流式对话 → 实时渲染 → 存储记录 →
 
 ### DeepSeek API 配置
 
-**API Key**: `sk-58b77b8b4df647eda9199e5d5a86df97`
+**API Key**: `sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` (请替换为您的实际 Key)
 
-> ⚠️ **安全提醒**: 此 API Key 已暴露在配置文件中，生产环境建议：
+> ⚠️ **安全提醒**:
 > 1. 使用后端服务中转 API 请求
 > 2. 配置环境变量管理敏感信息
 > 3. 定期检查 DeepSeek 平台使用情况

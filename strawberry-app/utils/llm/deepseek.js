@@ -1,23 +1,20 @@
 import { handleError } from '../errorHandler.js'
-import { useChatStore } from '@/store/chat.js'
 
 /**
  * 通用 OpenAI 兼容流式对话
  */
 export async function streamChat(messages, opts = {}) {
-  const { system = '', onChunk, onDone, onError, abortSignal, modelOverride } = opts
-  const store = useChatStore()
-  const config = store.activeConfig
+  const { system = '', onChunk, onDone, onError, abortSignal, modelOverride, config } = opts
   
+  if (!config || !config.key) {
+    onError?.('请先在设置页填写 API Key')
+    return
+  }
+
   const key = config.key
   const apiUrl = config.url.endsWith('/chat/completions') 
     ? config.url 
     : config.url.replace(/\/+$/, '') + '/chat/completions'
-
-  if (!key) {
-    onError?.('请先在设置页填写 API Key')
-    return
-  }
 
   const payload = {
     model: modelOverride || 'deepseek-chat',
@@ -78,7 +75,7 @@ export async function streamChat(messages, opts = {}) {
     onDone?.(full)
   } catch (error) {
     const errorResult = handleError(error, {
-      context: { type: 'llm_api', model: store.currentModel },
+      context: { type: 'llm_api' },
       showToast: false
     })
     onError?.(errorResult.userMessage)

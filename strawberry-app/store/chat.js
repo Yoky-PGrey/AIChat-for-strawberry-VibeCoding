@@ -1,18 +1,15 @@
-// store/chat.js — 对话状态管理 (Pinia)
 import { defineStore } from 'pinia'
 
 export const useChatStore = defineStore('chat', {
   state: () => ({
-    messages:   [],        // { id, role, content, time, loading }
+    messages:   [],
     isLoading:  false,
-    fontSize:   'md',      // 'sm' | 'md' | 'lg' | 'xl'
-    autoSpeak:  true,      // AI回复自动朗读
-    sessionId:  Date.now(), // 当前会话ID
-    loadingStage: 'idle',  // 'idle' | 'kb_query' | 'ai_processing' | 'streaming'
-    loadingProgress: 0,    // 0-100
-    
-    // 模型配置
-    currentModel: 'deepseek', // 'deepseek' | 'kimi' | 'qwen'
+    fontSize:   'md',
+    autoSpeak:  true,
+    sessionId:  Date.now(),
+    loadingStage: 'idle',
+    loadingProgress: 0,
+    currentModel: 'deepseek',
     config: {
       deepseek: { key: '', url: 'https://api.deepseek.com/v1' },
       kimi:     { key: '', url: 'https://api.moonshot.cn/v1' },
@@ -20,7 +17,6 @@ export const useChatStore = defineStore('chat', {
     },
     kbUrl: ''
   }),
-
   getters: {
     fontSizeRpx: (s) => ({ sm: 28, md: 34, lg: 40, xl: 48 }[s.fontSize] || 34),
     apiMessages: (s) =>
@@ -30,9 +26,33 @@ export const useChatStore = defineStore('chat', {
         .slice(-20),
     activeConfig: (s) => s.config[s.currentModel] || s.config.deepseek
   },
-
   actions: {
-    // ... existing actions ...
+    addUser(content) {
+      const m = this._msg('user', content)
+      this.messages.push(m)
+      this._save()
+      return m
+    },
+    addAssistant() {
+      const m = this._msg('assistant', '', true)
+      this.messages.push(m)
+      return m
+    },
+    updateAssistant(id, content, done = false) {
+      const m = this.messages.find(x => x.id === id)
+      if (!m) return
+      m.content = content
+      if (done) { m.loading = false; this._save() }
+    },
+    setError(id, msg) {
+      const m = this.messages.find(x => x.id === id)
+      if (m) { m.content = "⚠️ " + msg; m.loading = false; m.error = true }
+    },
+    clear() {
+      this.messages = []
+      this.sessionId = Date.now()
+      uni.removeStorageSync('chat_msgs')
+    },
     load() {
       try {
         const raw = uni.getStorageSync('chat_msgs')
@@ -40,8 +60,6 @@ export const useChatStore = defineStore('chat', {
       } catch (_) {}
       this.autoSpeak = uni.getStorageSync('auto_speak') !== false
       this.fontSize  = uni.getStorageSync('font_size') || 'md'
-      
-      // 加载模型配置
       this.currentModel = uni.getStorageSync('current_model') || 'deepseek'
       const savedConfig = uni.getStorageSync('models_config')
       if (savedConfig) {
@@ -67,32 +85,6 @@ export const useChatStore = defineStore('chat', {
       this.kbUrl = url
       uni.setStorageSync('kb_url', url)
     },
-    addUser(content) {
-      const m = this._msg('user', content)
-      this.messages.push(m)
-      this._save()
-      return m
-    },
-    addAssistant() {
-      const m = this._msg('assistant', '', true)
-      this.messages.push(m)
-      return m
-    },
-    updateAssistant(id, content, done = false) {
-      const m = this.messages.find(x => x.id === id)
-      if (!m) return
-      m.content = content
-      if (done) { m.loading = false; this._save() }
-    },
-    setError(id, msg) {
-      const m = this.messages.find(x => x.id === id)
-      if (m) { m.content = `⚠️ ${msg}`; m.loading = false; m.error = true }
-    },
-    clear() {
-      this.messages = []
-      this.sessionId = Date.now()
-      uni.removeStorageSync('chat_msgs')
-    },
     setFontSize(v) {
       this.fontSize = v
       uni.setStorageSync('font_size', v)
@@ -111,34 +103,14 @@ export const useChatStore = defineStore('chat', {
     _save() {
       try { uni.setStorageSync('chat_msgs', JSON.stringify(this.messages.slice(-50))) } catch (_) {}
     },
-
-    /**
-     * 设置加载阶段
-     * @param {'idle'|'kb_query'|'ai_processing'|'streaming'} stage 加载阶段
-     */
     setLoadingStage(stage) {
       this.loadingStage = stage
-      // 根据阶段设置默认进度
-      const stageProgress = {
-        idle: 0,
-        kb_query: 20,
-        ai_processing: 40,
-        streaming: 60
-      }
+      const stageProgress = { idle: 0, kb_query: 20, ai_processing: 40, streaming: 60 }
       this.loadingProgress = stageProgress[stage] || 0
     },
-
-    /**
-     * 设置加载进度
-     * @param {number} progress 进度值 (0-100)
-     */
     setLoadingProgress(progress) {
       this.loadingProgress = Math.max(0, Math.min(100, progress))
     },
-
-    /**
-     * 重置加载状态
-     */
     resetLoading() {
       this.isLoading = false
       this.loadingStage = 'idle'

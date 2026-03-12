@@ -116,11 +116,11 @@
 
 <script>
 import { ref, onMounted, nextTick, computed } from 'vue'
-import { useChatStore } from '@/store/chat.js'
-import { queryKnowledge, buildPrompt } from '@/utils/knowledge.js'
-import { streamChat } from '@/utils/llm/index.js'
-import SideDrawer from '@/components/side-drawer.vue'
-import { marked } from '@/utils/marked.js'
+import { useChatStore } from '../../store/chat.js'
+import { queryKnowledge, buildPrompt } from '../../utils/knowledge.js'
+import { streamChat } from '../../utils/llm/index.js'
+import SideDrawer from '../../components/side-drawer.vue'
+import { marked } from '../../utils/marked.js'
 
 export default {
   name: 'HomePage',
@@ -168,6 +168,8 @@ export default {
         let fullContent = ''
         await streamChat(store.apiMessages, {
           system: systemPrompt,
+          model: store.currentModel,
+          config: store.activeConfig,
           onChunk: (delta, full) => {
             fullContent = full
             store.updateAssistant(assistantMsg.id, fullContent)
@@ -210,9 +212,13 @@ export default {
     }
 
     function renderMarkdown(content) {
-      if (!content) return ''
-      // 基础配置，确保换行符被正确处理
-      return marked.parse(content)
+      try {
+        if (!content) return ''
+        return marked.parse(content)
+      } catch (e) {
+        console.error('Markdown parse error:', e)
+        return content
+      }
     }
 
     return { 

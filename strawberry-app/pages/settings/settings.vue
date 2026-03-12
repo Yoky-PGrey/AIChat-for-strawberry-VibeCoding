@@ -122,7 +122,7 @@
 
 <script>
 import { ref, onMounted, computed, watch } from 'vue';
-import { useChatStore } from '@/store/chat.js';
+import { useChatStore } from '../../store/chat.js';
 
 export default {
 	name: 'SettingsPage',

@@ -52,7 +52,14 @@
           >
             <text v-if="msg.role === 'assistant'" class="msg-name">草莓管家</text>
             <view class="msg-bubble">
-              <text v-if="!msg.loading" selectable>{{ msg.content }}</text>
+              <block v-if="!msg.loading">
+                <rich-text 
+                  v-if="msg.role === 'assistant'" 
+                  :nodes="renderMarkdown(msg.content)" 
+                  class="markdown-body"
+                />
+                <text v-else selectable>{{ msg.content }}</text>
+              </block>
               <!-- 正在输入动画 -->
               <view v-else class="dots">
                 <view class="dot"></view>
@@ -113,6 +120,7 @@ import { useChatStore } from '@/store/chat.js'
 import { queryKnowledge, buildPrompt } from '@/utils/knowledge.js'
 import { streamChat } from '@/utils/llm/index.js'
 import SideDrawer from '@/components/side-drawer.vue'
+import { marked } from '@/utils/marked.js'
 
 export default {
   name: 'HomePage',
@@ -201,9 +209,15 @@ export default {
       if (page === 'settings') uni.navigateTo({ url: '/pages/settings/settings' })
     }
 
+    function renderMarkdown(content) {
+      if (!content) return ''
+      // 基础配置，确保换行符被正确处理
+      return marked.parse(content)
+    }
+
     return { 
       store, inputTxt, drawerOpen, outputMode, scrollTop, isRecording, todayStr,
-      askQuick, onSend, handleNavigate, startVoice, stopVoice 
+      askQuick, onSend, handleNavigate, startVoice, stopVoice, renderMarkdown 
     }
   }
 }
@@ -396,6 +410,81 @@ export default {
 
 .msg.user .msg-time {
   text-align: right;
+}
+
+/* ── Markdown 渲染样式 ── */
+.markdown-body {
+  font-size: 32rpx;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+:deep(.markdown-body) {
+  p { margin-bottom: 16rpx; }
+  p:last-child { margin-bottom: 0; }
+  
+  h1, h2, h3, h4, h5, h6 {
+    color: #c0392b;
+    font-weight: bold;
+    margin: 24rpx 0 16rpx;
+    line-height: 1.4;
+  }
+  h1 { font-size: 40rpx; }
+  h2 { font-size: 36rpx; }
+  h3 { font-size: 34rpx; }
+  
+  strong { font-weight: bold; color: #c0392b; }
+  em { font-style: italic; }
+  
+  ul, ol {
+    padding-left: 32rpx;
+    margin-bottom: 16rpx;
+  }
+  li { margin-bottom: 8rpx; }
+  
+  code {
+    background: rgba(109, 76, 65, 0.08);
+    padding: 4rpx 8rpx;
+    border-radius: 6rpx;
+    font-family: monospace;
+    font-size: 28rpx;
+    margin: 0 4rpx;
+  }
+  
+  pre {
+    background: #fdf6ec;
+    padding: 20rpx;
+    border-radius: 12rpx;
+    overflow-x: auto;
+    margin-bottom: 16rpx;
+    border: 1rpx solid #efebe9;
+    code {
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      display: block;
+    }
+  }
+  
+  blockquote {
+    border-left: 8rpx solid #f5b7b1;
+    padding: 10rpx 24rpx;
+    background: rgba(245, 183, 177, 0.1);
+    margin-bottom: 16rpx;
+    color: #5d4037;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16rpx;
+    th, td {
+      border: 1rpx solid #efebe9;
+      padding: 12rpx;
+      text-align: left;
+    }
+    th { background: #fdf6ec; font-weight: bold; }
+  }
 }
 
 /* 正在输入动画 */

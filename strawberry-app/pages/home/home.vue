@@ -1,295 +1,510 @@
 <template>
   <view class="home">
+    <!-- 侧边导航抽屉 -->
+    <SideDrawer
+      :open="drawerOpen"
+      :current-page="'home'"
+      @close="drawerOpen = false"
+      @navigate="handleNavigate"
+    />
 
-    <!-- 头部横幅 -->
-    <view class="hero">
-      <view class="hero-bg">
-        <view class="circle c1" /><view class="circle c2" /><view class="circle c3" />
+    <!-- 顶部栏 -->
+    <view class="topbar">
+      <view class="topbar-menu" @tap="drawerOpen = true">
+        <i class="ri-menu-2-line menu-icon"></i>
       </view>
-      <view class="hero-content">
-        <view class="logo-row">
-          <text class="logo-icon">🍓</text>
-          <view>
-            <text class="app-name">草莓管家</text>
-            <text class="app-sub">种草莓·问专家·不出门</text>
+      <view class="topbar-center">
+        <text class="title-text">🍓 草莓管家</text>
+        <text class="status-text">● 知识库已就绪</text>
+      </view>
+      <view class="topbar-right-placeholder"></view>
+    </view>
+
+    <!-- 聊天区域 -->
+    <scroll-view 
+      scroll-y 
+      class="chat-area" 
+      :scroll-top="scrollTop"
+      scroll-with-animation
+    >
+      <view class="chat-content-wrapper">
+        <view class="date-sep">今天 · {{ todayStr }}</view>
+
+        <!-- 欢迎卡片 -->
+        <view v-if="store.messages.length === 0" class="welcome-card">
+          <view class="wc-icon">🍓</view>
+          <text class="wc-title">您好！我是草莓管家</text>
+          <text class="wc-desc">基于 GraphRAG 知识库，专为草莓种植提供精准解答。有什么想问的，直接说！</text>
+          <view class="quick-questions">
+            <view class="qq-btn" @tap="askQuick('草莓常见病虫害有哪些？')">🌿 草莓常见病虫害有哪些？</view>
+            <view class="qq-btn" @tap="askQuick('大棚草莓怎么控温保湿？')">🌡️ 大棚草莓怎么控温保湿？</view>
+            <view class="qq-btn" @tap="askQuick('草莓什么时候施肥效果最好？')">🌱 草莓什么时候施肥效果最好？</view>
           </view>
         </view>
-        <view class="kb-badge" :class="kbReady ? 'badge-on' : 'badge-off'">
-          <text class="badge-dot" />
-          <text class="badge-txt">{{ kbReady ? '知识库已连接' : '知识库未连接' }}</text>
-        </view>
-      </view>
-    </view>
 
-    <!-- 主操作按钮 -->
-    <view class="main-actions">
-      <view class="action-btn btn-voice animate-scale-in" @tap="goChat('voice')">
-        <text class="btn-icon">🎤</text>
-        <text class="btn-label">按住说话</text>
-        <text class="btn-sub">语音提问更方便</text>
-      </view>
-      <view class="action-btn btn-text" @tap="goChat('text')">
-        <text class="btn-icon">⌨️</text>
-        <text class="btn-label">文字提问</text>
-        <text class="btn-sub">打字输入问题</text>
-      </view>
-    </view>
-
-    <!-- 快捷提问 -->
-    <view class="section">
-      <view class="section-header">
-        <text class="section-icon">💬</text>
-        <text class="section-title">常见问题，一点就问</text>
-      </view>
-      <view class="quick-grid">
-        <view
-          v-for="(q, index) in quickQuestions"
-          :key="q.id"
-          class="quick-card animate-slide-up-in"
-          :style="{ animationDelay: `${index * 0.08}s` }"
-          @tap="askQuick(q.text)"
+        <!-- 消息列表 -->
+        <view 
+          v-for="msg in store.messages" 
+          :key="msg.id" 
+          class="msg animate-msg-in"
+          :class="msg.role === 'user' ? 'user' : 'bot'"
         >
-          <text class="quick-emoji">{{ q.emoji }}</text>
-          <text class="quick-text">{{ q.text }}</text>
+          <text v-if="msg.role === 'assistant'" class="msg-name">草莓管家</text>
+          <view class="msg-bubble">
+            <text v-if="!msg.loading">{{ msg.content }}</text>
+            <!-- 正在输入动画 -->
+            <view v-else class="dots">
+              <view class="dot"></view>
+              <view class="dot"></view>
+              <view class="dot"></view>
+            </view>
+          </view>
+          <text class="msg-time">{{ msg.time }}</text>
         </view>
+        
+        <view style="height: 40rpx;"></view>
+      </view>
+    </scroll-view>
+
+    <!-- 底部输入区域 -->
+    <view class="input-area">
+      <view class="input-wrap">
+        <textarea
+          v-model="inputTxt"
+          class="chat-input"
+          placeholder="问问草莓管家…"
+          auto-height
+          :maxlength="500"
+          :cursor-spacing="20"
+          :fixed="true"
+          :adjust-position="true"
+        />
+        <view 
+          class="input-voice-btn" 
+          :class="{ recording: isRecording }"
+          @touchstart="startVoice"
+          @touchend="stopVoice"
+        >
+          <i class="ri-mic-line mic-icon"></i>
+        </view>
+      </view>
+      <view class="send-btn" @tap="onSend">
+        <i class="ri-send-plane-2-fill send-icon"></i>
       </view>
     </view>
 
-    <!-- 种植小贴士 -->
-    <view class="section">
-      <view class="section-header">
-        <text class="section-icon">📋</text>
-        <text class="section-title">今日小贴士</text>
+    <!-- 语音录制遮罩 -->
+    <view v-if="isRecording" class="voice-overlay">
+      <view class="voice-circle animate-pulse">
+        <i class="ri-mic-fill mic-large"></i>
       </view>
-      <view class="tip-card">
-        <view class="tip-tag">
-          <text>{{ tipOfDay.tag }}</text>
-        </view>
-        <text class="tip-content">{{ tipOfDay.content }}</text>
-        <view class="tip-ask" @tap="askQuick(tipOfDay.question)">
-          <text>继续了解 →</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- 底部导航 -->
-    <view class="tabbar">
-      <view class="tab active">
-        <text class="tab-icon">🏠</text>
-        <text class="tab-label">首页</text>
-      </view>
-      <view class="tab" @tap="goChat('')">
-        <text class="tab-icon">💬</text>
-        <text class="tab-label">问答</text>
-      </view>
-      <view class="tab" @tap="goHistory">
-        <text class="tab-icon">📜</text>
-        <text class="tab-label">记录</text>
-      </view>
-      <view class="tab" @tap="goSettings">
-        <text class="tab-icon">⚙️</text>
-        <text class="tab-label">设置</text>
-      </view>
+      <text class="voice-text">正在听… 说完后松开</text>
+      <view class="voice-cancel">取消</view>
     </view>
 
   </view>
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted, nextTick, computed } from 'vue'
 import { useChatStore } from '@/store/chat.js'
-import { getKbUrl } from '@/utils/knowledge.js'
-import { AnimationHelper } from '@/utils/animations.js'
+import { queryKnowledge, buildPrompt } from '@/utils/knowledge.js'
+import { streamChat } from '@/utils/deepseek.js'
+import SideDrawer from '@/components/side-drawer.vue'
 
 export default {
   name: 'HomePage',
+  components: { SideDrawer },
   setup() {
-    const store  = useChatStore()
-    const kbReady = ref(false)
+    const store = useChatStore()
+    const inputTxt = ref('')
+    const drawerOpen = ref(false)
+    const outputMode = ref('text')
+    const scrollTop = ref(0)
+    const isRecording = ref(false)
+
+    const todayStr = computed(() => {
+      const d = new Date()
+      return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
+    })
 
     onMounted(() => {
       store.load()
-      kbReady.value = !!getKbUrl()
+      scrollToBottom()
     })
 
-    const quickQuestions = [
-      { id:1,  emoji:'🌱', text:'草莓怎么育苗？' },
-      { id:2,  emoji:'💧', text:'草莓怎么浇水？' },
-      { id:3,  emoji:'🌿', text:'草莓叶子发黄怎么办？' },
-      { id:4,  emoji:'🐛', text:'草莓有虫子怎么治？' },
-      { id:5,  emoji:'🧪', text:'草莓施什么肥好？' },
-      { id:6,  emoji:'🍓', text:'草莓什么时候可以采摘？' },
-      { id:7,  emoji:'❄️', text:'草莓冬天怎么保暖？' },
-      { id:8,  emoji:'🦠', text:'草莓灰霉病怎么防治？' },
-    ]
-
-    const tips = [
-      { tag:'浇水技巧', content:'草莓根系较浅，喜湿怕涝。建议早晨浇水，避免傍晚浇水导致夜间湿度过高引发病害。', question:'草莓正确的浇水方法是什么？' },
-      { tag:'施肥要点', content:'草莓开花结果期对钾肥需求大，适当补充磷钾肥可以让果实更甜、颜色更鲜艳。', question:'草莓结果期怎么施肥？' },
-      { tag:'病害预防', content:'草莓灰霉病高发于低温多湿环境，及时清除枯叶、保持通风是最好的预防措施。', question:'如何预防草莓灰霉病？' },
-      { tag:'采摘时机', content:'草莓果实整体变红、略有弹性时口感最佳。过早采摘酸味重，过晚则容易软烂。', question:'草莓最佳采摘时间怎么判断？' },
-    ]
-    const tipOfDay = computed(() => tips[new Date().getDate() % tips.length])
-
-    function goChat(mode) {
-      uni.navigateTo({ url: `/pages/chat/chat${mode ? '?mode=' + mode : ''}` })
+    function scrollToBottom() {
+      nextTick(() => {
+        scrollTop.value = 99999 + Math.random()
+      })
     }
-    function goHistory()  { uni.navigateTo({ url: '/pages/history/history' }) }
-    function goSettings() { uni.navigateTo({ url: '/pages/settings/settings' }) }
+
+    async function onSend() {
+      const text = inputTxt.value.trim()
+      if (!text || store.isLoading) return
+
+      inputTxt.value = ''
+      store.addUser(text)
+      scrollToBottom()
+
+      store.isLoading = true
+      const assistantMsg = store.addAssistant()
+      scrollToBottom()
+
+      try {
+        const kb = await queryKnowledge(text)
+        const systemPrompt = buildPrompt(kb)
+
+        let fullContent = ''
+        await streamChat(store.apiMessages, {
+          system: systemPrompt,
+          onChunk: (delta, full) => {
+            fullContent = full
+            store.updateAssistant(assistantMsg.id, fullContent)
+            scrollToBottom()
+          },
+          onDone: (full) => {
+            store.updateAssistant(assistantMsg.id, full, true)
+            store.isLoading = false
+            scrollToBottom()
+          },
+          onError: (err) => {
+            store.setError(assistantMsg.id, err)
+            store.isLoading = false
+          }
+        })
+      } catch (e) {
+        store.setError(assistantMsg.id, '请求失败，请检查网络或配置')
+        store.isLoading = false
+      }
+    }
 
     function askQuick(text) {
-      uni.navigateTo({ url: `/pages/chat/chat?q=${encodeURIComponent(text)}` })
+      inputTxt.value = text
+      onSend()
     }
 
-    return { store, kbReady, quickQuestions, tipOfDay, goChat, goHistory, goSettings, askQuick }
+    function startVoice() {
+      isRecording.value = true
+    }
+
+    function stopVoice() {
+      isRecording.value = false
+      const demo = ['草莓叶子发黄怎么办', '大棚里需要多浇水吗', '草莓什么时候成熟']
+      inputTxt.value = demo[Math.floor(Math.random() * demo.length)]
+    }
+
+    function handleNavigate(page) {
+      if (page === 'home') return
+      if (page === 'settings') uni.navigateTo({ url: '/pages/settings/settings' })
+    }
+
+    return { 
+      store, inputTxt, drawerOpen, outputMode, scrollTop, isRecording, todayStr,
+      askQuick, onSend, handleNavigate, startVoice, stopVoice 
+    }
   }
 }
 </script>
 
-<style>
-page { background: #FDF6F0; height: 100%; }
-
+<style lang="scss">
 .home {
-  min-height: 100vh;
-  background: #FDF6F0;
-  padding-bottom: calc(140rpx + env(safe-area-inset-bottom));
-  font-family: -apple-system, 'PingFang SC', sans-serif;
-}
-
-/* ── Hero ── */
-.hero {
-  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #fdf6ec;
   overflow: hidden;
-  background: linear-gradient(145deg, #C0392B 0%, #E8314A 45%, #FF6B7A 100%);
-  padding: 60rpx 40rpx 50rpx;
-  padding-top: calc(60rpx + env(safe-area-inset-top));
-  border-radius: 0 0 60rpx 60rpx;
 }
-.hero-bg { position: absolute; inset: 0; pointer-events: none; }
-.circle {
-  position: absolute; border-radius: 50%;
-  background: rgba(255,255,255,0.08);
-}
-.c1 { width: 300rpx; height: 300rpx; top: -80rpx; right: -60rpx; }
-.c2 { width: 200rpx; height: 200rpx; bottom: -60rpx; left: 20rpx; }
-.c3 { width: 120rpx; height: 120rpx; top: 40rpx; left: 50%; }
-.hero-content { position: relative; z-index: 1; }
 
-.logo-row {
-  display: flex; align-items: center; gap: 24rpx; margin-bottom: 28rpx;
+/* ── 顶部栏 ── */
+.topbar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 20rpx 32rpx 24rpx;
+  padding-top: calc(20rpx + env(safe-area-inset-top));
+  background: #fffcf7;
+  border-bottom: 3rpx solid #efebe9;
+  flex-shrink: 0;
 }
-.logo-icon { font-size: 88rpx; line-height: 1; }
-.app-name {
-  display: block; font-size: 52rpx; font-weight: 800;
-  color: #fff; letter-spacing: 2rpx;
-}
-.app-sub {
-  display: block; font-size: 26rpx;
-  color: rgba(255,255,255,0.75); margin-top: 6rpx;
-}
-.kb-badge {
-  display: inline-flex; align-items: center; gap: 10rpx;
-  padding: 10rpx 24rpx; border-radius: 40rpx;
-}
-.badge-on  { background: rgba(255,255,255,0.2); }
-.badge-off { background: rgba(0,0,0,0.15); }
-.badge-dot {
-  width: 14rpx; height: 14rpx; border-radius: 50%;
-  background: #7DFFB3; display: block;
-}
-.badge-off .badge-dot { background: #FFD580; }
-.badge-txt { font-size: 26rpx; color: rgba(255,255,255,0.9); }
 
-/* ── 主操作按钮 ── */
-.main-actions {
-  display: flex; gap: 24rpx;
-  padding: 40rpx 30rpx 10rpx;
+.topbar-menu {
+  width: 80rpx;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.action-btn {
-  flex: 1; border-radius: 32rpx; padding: 40rpx 20rpx;
-  display: flex; flex-direction: column; align-items: center; gap: 12rpx;
-  box-shadow: 0 8rpx 32rpx rgba(0,0,0,0.12);
-  transition: transform .15s, box-shadow .15s;
-  cursor: pointer;
-}
-.action-btn:active {
-  transform: scale(0.97);
-  box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.1);
-}
-.btn-voice { background: #E8314A; }
-.btn-text  { background: #3D7A4F; }
-.btn-icon  { font-size: 72rpx; }
-.btn-label { font-size: 38rpx; font-weight: 700; color: #fff; }
-.btn-sub   { font-size: 24rpx; color: rgba(255,255,255,0.75); }
 
-/* ── Section ── */
-.section { padding: 36rpx 30rpx 0; }
-.section-header {
-  display: flex; align-items: center; gap: 12rpx; margin-bottom: 24rpx;
-}
-.section-icon { font-size: 38rpx; }
-.section-title { font-size: 34rpx; font-weight: 700; color: #2C1810; }
+.menu-icon { font-size: 52rpx; color: #2c1810; }
 
-/* ── 快捷提问 ── */
-.quick-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.topbar-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.title-text {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #2c1810;
+  letter-spacing: 2rpx;
+}
+
+.status-text {
+  font-size: 22rpx;
+  color: #27ae60;
+  font-weight: 500;
+  margin-top: 4rpx;
+}
+
+.topbar-right-placeholder {
+  width: 80rpx;
+}
+
+/* ── 聊天区域 ── */
+.chat-area {
+  flex: 1;
+  width: 100%;
+  overflow: hidden;
+}
+
+.chat-content-wrapper {
+  padding: 0 28rpx;
+  width: 100%;
+}
+
+.date-sep {
+  text-align: center;
+  font-size: 22rpx;
+  color: #a1887f;
+  margin: 40rpx auto 32rpx;
+  padding: 6rpx 24rpx;
+  background: rgba(109, 76, 65, 0.05);
+  border-radius: 20rpx;
+  width: fit-content;
+}
+
+/* 欢迎卡片 */
+.welcome-card {
+  margin: 10rpx 0 40rpx;
+  padding: 40rpx 32rpx;
+  background: linear-gradient(135deg, #fdecea 0%, #eafaf1 100%);
+  border: 3rpx solid #f5b7b1;
+  border-radius: 36rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
+}
+
+.wc-icon { font-size: 100rpx; margin-bottom: 20rpx; }
+.wc-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #c0392b;
+  margin-bottom: 16rpx;
+}
+.wc-desc {
+  font-size: 28rpx;
+  color: #5d4037;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.quick-questions {
+  margin-top: 32rpx;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   gap: 20rpx;
 }
-.quick-card {
-  background: #fff;
+
+.qq-btn {
+  width: 100%;
+  padding: 24rpx 32rpx;
+  background: #fffcf7;
+  border: 3rpx solid #f5b7b1;
   border-radius: 24rpx;
-  padding: 30rpx 24rpx;
-  display: flex; align-items: center; gap: 18rpx;
-  box-shadow: 0 4rpx 16rpx rgba(200,80,60,0.08);
-  border: 2rpx solid #FCE8E4;
-  transition: transform .15s, box-shadow .15s, background .15s;
-  cursor: pointer;
+  color: #c0392b;
+  font-size: 28rpx;
+  font-weight: 500;
+  text-align: center;
 }
-.quick-card:active {
-  transform: scale(0.97);
-  background: #FFF5F3;
-}
-.quick-emoji { font-size: 44rpx; flex-shrink: 0; }
-.quick-text  { font-size: 30rpx; color: #3D1A10; font-weight: 500; line-height: 1.4; }
 
-/* ── 小贴士 ── */
-.tip-card {
-  background: #fff;
-  border-radius: 28rpx;
-  padding: 36rpx;
-  border-left: 8rpx solid #E8314A;
-  box-shadow: 0 4rpx 20rpx rgba(200,80,60,0.1);
-}
-.tip-tag {
-  display: inline-block;
-  background: #FFF0EE; border-radius: 10rpx; padding: 8rpx 20rpx;
-  margin-bottom: 20rpx;
-}
-.tip-tag text { font-size: 26rpx; color: #E8314A; font-weight: 600; }
-.tip-content { font-size: 32rpx; color: #3D1A10; line-height: 1.7; display: block; }
-.tip-ask {
-  margin-top: 24rpx;
-  text-align: right;
-}
-.tip-ask text { font-size: 28rpx; color: #E8314A; font-weight: 600; }
-
-/* ── Tabbar ── */
-.tabbar {
-  position: fixed; bottom: 0; left: 0; right: 0;
+/* 消息气泡 */
+.msg {
   display: flex;
-  background: #fff;
-  border-top: 1rpx solid #F0E8E4;
-  padding: 16rpx 0;
-  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
-  box-shadow: 0 -4rpx 24rpx rgba(0,0,0,0.06);
+  flex-direction: column;
+  max-width: 88%;
+  margin-bottom: 36rpx;
 }
-.tab {
-  flex: 1; display: flex; flex-direction: column;
-  align-items: center; gap: 8rpx; padding: 12rpx 0;
+
+.msg.user { align-self: flex-end; align-items: flex-end; }
+.msg.bot { align-self: flex-start; align-items: flex-start; }
+
+.msg-name {
+  font-size: 24rpx;
+  color: #a1887f;
+  font-weight: 600;
+  margin-bottom: 10rpx;
+  padding-left: 8rpx;
+}
+
+.msg-bubble {
+  padding: 24rpx 36rpx;
+  border-radius: 36rpx;
+  font-size: 32rpx;
+  line-height: 1.6;
+}
+
+.msg.user .msg-bubble {
+  background: #c0392b;
+  color: #fff;
+  border-bottom-right-radius: 12rpx;
+  box-shadow: 0 6rpx 24rpx rgba(192, 57, 43, 0.2);
+}
+
+.msg.bot .msg-bubble {
+  background: #fffcf7;
+  color: #2c1810;
+  border-bottom-left-radius: 12rpx;
+  border: 3rpx solid #efebe9;
+  box-shadow: 0 4rpx 16rpx rgba(109, 76, 65, 0.1);
+}
+
+.msg-time {
+  font-size: 22rpx;
+  color: #a1887f;
+  margin-top: 12rpx;
+  padding: 0 12rpx;
+}
+
+/* 正在输入动画 */
+.dots { display: flex; gap: 12rpx; align-items: center; padding: 12rpx 0; }
+.dot {
+  width: 14rpx; height: 14rpx;
+  background: #a1887f;
+  border-radius: 50%;
+  animation: bounce 1.2s infinite;
+}
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-12rpx)} }
+
+/* ── 底部输入区域 ── */
+.input-area {
+  width: 100%;
+  max-width: 100vw;
+  padding: 24rpx 32rpx;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+  background: #fffcf7;
+  border-top: 3rpx solid #efebe9;
+  display: flex;
+  align-items: flex-end;
+  gap: 20rpx;
+  flex-shrink: 0;
+}
+
+.input-wrap {
+  flex: 1;
+  background: #fdf6ec;
+  border: 3rpx solid #efebe9;
+  border-radius: 48rpx;
+  display: flex;
+  align-items: flex-end;
+  gap: 16rpx;
+  padding: 16rpx 32rpx;
   min-height: 88rpx;
+  overflow: hidden;
 }
-.tab-icon  { font-size: 44rpx; }
-.tab-label { font-size: 24rpx; color: #999; }
-.tab.active .tab-label { color: #E8314A; font-weight: 600; }
+
+.chat-input {
+  flex: 1;
+  width: 100%;
+  font-size: 32rpx;
+  color: #2c1810;
+  min-height: 44rpx;
+  max-height: 240rpx;
+  line-height: 1.5;
+  padding: 4rpx 0;
+}
+
+.input-voice-btn {
+  width: 68rpx;
+  height: 68rpx;
+  border-radius: 50%;
+  background: #efebe9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.input-voice-btn.recording {
+  background: #c0392b;
+  color: #fff;
+}
+
+.mic-icon { font-size: 40rpx; }
+
+.send-btn {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: #c0392b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 8rpx 24rpx rgba(192, 57, 43, 0.35);
+}
+
+.send-icon {
+  font-size: 48rpx;
+  color: #fff;
+}
+
+/* ── 语音录制遮罩 ── */
+.voice-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(44, 24, 16, 0.8);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 40rpx;
+}
+
+.voice-circle {
+  width: 200rpx;
+  height: 200rpx;
+  border-radius: 50%;
+  background: #c0392b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mic-large { font-size: 88rpx; color: #fff; }
+
+.voice-text {
+  color: #fff;
+  font-size: 34rpx;
+  font-weight: 500;
+}
+
+.voice-cancel {
+  padding: 24rpx 64rpx;
+  background: rgba(255, 255, 255, 0.15);
+  border: 3rpx solid rgba(255, 255, 255, 0.3);
+  border-radius: 48rpx;
+  color: #fff;
+  font-size: 30rpx;
+}
 </style>

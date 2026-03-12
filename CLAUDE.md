@@ -1,6 +1,6 @@
 # 🍓 草莓管家 - 项目说明文档
 
-> **版本**: v0.9.0 | **更新日期**: 2026-03-10 | **GitHub**: https://github.com/Yoky-PGrey/AIChat-for-strawberry-VibeCoding
+> **版本**: v0.9.1 | **更新日期**: 2026-03-10 | **GitHub**: https://github.com/Yoky-PGrey/AIChat-for-strawberry-VibeCoding
 
 ---
 
@@ -23,18 +23,18 @@
 ### 当前架构（MVP 版本）
 
 ```
-┌─────────────────────────────────────────┐
+┌─────────────────────────────────┐
 │          UniApp 客户端                   │
 │   Android / iOS / H5 / 小程序            │
 └──────────────────┬──────────────────────┘
                    │ 直接 HTTP 请求
                    ▼
-┌─────────────────────────────────────────┐
+┌─────────────────────────────────┐
 │             外部服务（直连）              │
 │   • DeepSeek API (api.deepseek.com)     │
 │   • GraphRAG 知识库服务（用户配置）      │
 │   • 讯飞 ASR（已集成，待配置）          │
-└─────────────────────────────────────────┘
+└─────────────────────────────────┘
 ```
 
 ### 技术栈
@@ -65,7 +65,7 @@ DeepSeek 流式对话 → 实时渲染 → 存储记录 →
 
 ### DeepSeek API 配置
 
-**API Key**: `sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` (请替换为您的实际 Key)
+**API Key**: `sk-xxxxxxxxxxxxxxxxxxxxxxxx` (请替换为您的实际 Key)
 
 > ⚠️ **安全提醒**:
 > 1. 使用后端服务中转 API 请求
@@ -83,7 +83,7 @@ DeepSeek 流式对话 → 实时渲染 → 存储记录 →
 **配置方式**: 在应用设置页面配置以下参数：
 - APPID：讯飞应用 ID
 - API Key：讯飞 API Key
-- APISecret：讯飞 API Secret
+- API Secret：讯飞 API Secret
 
 ---
 
@@ -93,9 +93,9 @@ DeepSeek 流式对话 → 实时渲染 → 存储记录 →
 
 | 模块 | 状态 | 完成度 |
 |------|------|--------|
-| **UniApp 前端** | ✅ 已构建完成 | 98% |
+| **UniApp 前端** | 🔄 UI重构已完成 | 95% |
 | **核心功能** | ✅ 基本可用 | 95% |
-| **用户体验** | ✅ 已优化 | 90% |
+| **用户体验** | ✅ UI重构已完成 | 90% |
 | **后端服务** | ❌ 未开始 | 0% |
 | **数据库** | ❌ 未开始 | 0% |
 | **语音识别** | ✅ 已接入 | 85% |
@@ -105,7 +105,7 @@ DeepSeek 流式对话 → 实时渲染 → 存储记录 →
 #### 1. 项目结构搭建
 ```
 strawberry-app/
-├── pages/                        # 4个完整页面
+├── pages/                        # 3个完整页面
 ├── store/                        # Pinia 状态管理
 ├── utils/                        # 核心工具模块
 │   ├── deepseek.js              # DeepSeek API 封装
@@ -120,30 +120,15 @@ strawberry-app/
 
 #### 2. 页面功能
 
-**首页** (`pages/home/home.vue`)
-- ✅ 欢迎横幅 + 应用介绍
-- ✅ 知识库连接状态显示
-- ✅ 8个预设快捷问题
-- ✅ 每日种植小贴士（轮换）
-- ✅ 底部导航（首页、问答、记录、设置）
-
-**聊天页** (`pages/chat/chat.vue`)
-- ✅ 文字/语音输入模式切换
-- ✅ 流式对话实时渲染（打字机效果）
-- ✅ 消息气泡操作（朗读、复制）
-- ✅ 语音录音按钮 UI
-- ✅ 自动朗读开关控制
-- ✅ 对话清空功能
-- ✅ 错误状态显示
-- ✅ 进度指示器和取消功能
-
-**历史记录页** (`pages/history/history.vue`)
-- ✅ Q&A 配对显示
-- ✅ 支持朗读历史回答
-- ✅ 快速再次提问功能
-- ✅ 时间戳显示
+**首页** (`pages/home/home.vue`) - 对话界面
+- ✅ 侧边导航集成（抽屉式菜单）
+- ✅ 顶部导航栏（菜单图标 + 标题 + 新建对话按钮）
+- ✅ 输入框设计（白色背景，边框 #ffe7d2）
+- ✅ 快捷问题卡片（白色背景，#ffe7d2 边框）
+- ✅ 底部输入区域（fixed 定位，贴近问题卡片）
 
 **设置页** (`pages/settings/settings.vue`)
+- ✅ 侧边导航集成
 - ✅ 字体大小调节（4档：小、中、大、特大）
 - ✅ 语音播报开关
 - ✅ DeepSeek API Key 配置
@@ -156,11 +141,11 @@ strawberry-app/
 
 | 优先级 | 任务 | 状态 |
 |--------|------|------|
-| P0 | 配置 DeepSeek API Key 并测试 | 待开始 |
-| P0 | 搭建后端服务（解决 API Key 安全） | 未开始 |
-| P1 | 多端兼容性测试（H5/App/小程序） | 待开始 |
-| P1 | 数据库集成、用户认证系统 | 未开始 |
-| P2 | 实际接入讯飞 ASR API（申请权限） | 待配置 |
+| P1 | 配置 DeepSeek API Key 并测试 | 待开始 |
+| P1 | 搭建后端服务（解决 API Key 安全） | 未开始 |
+| P2 | 多端兼容性测试（H5/App/小程序） | 待开始 |
+| P2 | 数据库集成、用户认证系统 | 未开始 |
+| P3 | 实际接入讯飞 ASR API（申请权限） | 待配置 |
 
 ---
 
@@ -170,10 +155,10 @@ strawberry-app/
 ```
 strawberry-app/
 ├── pages/
-│   ├── home/home.vue              # 首页
-│   ├── chat/chat.vue              # 聊天页
-│   ├── history/history.vue        # 历史记录页
+│   ├── home/home.vue              # 首页/对话界面
 │   └── settings/settings.vue      # 设置页
+├── components/
+│   └── side-drawer.vue            # 侧边导航组件
 ├── store/
 │   └── chat.js                    # Pinia store
 ├── utils/
@@ -266,5 +251,121 @@ HBuilderX → 发行 → 选择目标平台
 ---
 
 **最后更新**: 2026-03-10
-**当前版本**: v0.9.0
+**当前版本**: v0.9.1
+**目标版本**: v1.0.0
+
+---
+
+## 🎨 UI 重构进度（基于 Figma 设计）
+
+### Figma 设计稿
+- **首页**: https://www.figma.com/design/oHWxkM9XABFBwOALLI4e5T/草莓专家AI设计稿?node-id=1-2
+- **侧边导航**: https://www.figma.com/design/oHWxkM9XABFBwOALLI4e5T/草莓专家AI设计稿?node-id=12-31
+- **语音对话控件**: https://www.figma.com/design/oHWxkM9XABFBwOALLI4e5T/草莓专家AI设计稿?node-id=41-2
+- **设置页导航**: https://www.figma.com/design/oHWxkM9XABFBwOALLI4e5T/草莓专家AI设计稿?node-id=57-20
+
+### 已完成
+- ✅ 侧边导航组件 (`components/side-drawer.vue`)
+- ✅ 侧边导航集成到各页面
+- ✅ 首页输入框样式优化
+- ✅ 设置页导航按钮优化
+
+### 样式规范
+| 元素 | Figma 设计 | 当前实现 |
+|------|-------------|----------|
+| 导航 | 侧边抽屉导航 | ✅ 已实现 |
+| 快捷问题边框 | #ffe7d2 | ✅ 已实现 |
+| 输入框背景 | #fff | ✅ 已实现 |
+| 输入框边框 | #ffe7d2 | ✅ 已实现 |
+| 输入框圆角 | 13px | ✅ 已实现 |
+
+### 组件状态
+- ✅ `components/side-drawer.vue` - 已完成
+- ✅ `pages/home/home.vue` - 已完成
+- ✅ `pages/settings/settings.vue` - 已完成
+
+### 设计差异对照
+| 元素 | 当前代码 | Figma 目标 |
+|------|---------|------------|
+| 导航 | 底部 Tabbar | 侧边抽屉导航 |
+| 快捷问题边框 | #ffe7d2 | #ffe7d2 |
+| 输入框背景 | #fff | #fff |
+| 输入框圆角 | 13px | 13px |
+
+---
+
+## 🔧 开发指南
+
+### 环境搭建
+
+**1. 安装 HBuilderX**
+- 前往 [DCloud 官网](https://www.dcloud.io/hbuilderx.html) 下载
+- 推荐版本：v3.9+，支持 Vue 3
+
+**2. 导入项目**
+```
+HBuilderX → 文件 → 导入 → 从本地目录导入 → 选择 strawberry-app/
+```
+
+**3. 运行项目**
+```
+HBuilderX 顶部菜单 → 运行 → 选择目标平台
+```
+
+### 代码规范
+
+- **Vue 组件**: 使用 Composition API
+- **命名规范**:
+  - 组件：PascalCase (`ChatMessage.vue`)
+  - 变量：camelCase (`userInfo`)
+  - 常量：UPPER_SNAKE_CASE (`API_BASE_URL`)
+
+### Git 提交规范
+
+```
+feat: 添加新功能
+fix: 修复 Bug
+docs: 文档更新
+style: 代码格式调整
+refactor: 代码重构
+```
+
+---
+
+## 🚀 部署
+
+### 当前方式（纯前端）
+```
+HBuilderX → 发行 → 选择目标平台
+```
+
+### 计划方式（后端架构）
+
+**后端技术栈**:
+- Node.js + Express
+- MySQL 数据库
+- JWT 认证
+- API 中转服务
+
+**部署步骤**:
+1. 搭建后端服务
+2. 配置 Nginx 反向代理
+3. 配置 SSL 证书
+4. 部署前端静态文件
+
+---
+
+## 📞 支持
+
+**GitHub**: https://github.com/Yoky-PGrey/AIChat-for-strawberry-VibeCoding
+
+**常见问题**:
+- H5 环境跨域问题 → 配置代理或使用后端中转
+- 语音播报不工作 → 检查浏览器/设备支持
+- API Key 问题 → 参考配置指南
+
+---
+
+**最后更新**: 2026-03-10
+**当前版本**: v0.9.1
 **目标版本**: v1.0.0

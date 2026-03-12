@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>草莓管家</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #c0392b;
+    --red-light: #e74c3c;
+    --red-soft: #fdecea;
+    --red-mid: #f5b7b1;
+    --green: #27ae60;
+    --green-light: #a9dfbf;
+    --green-soft: #eafaf1;
+    --cream: #fdf6ec;
+    --warm-white: #fffcf7;
+    --bark: #6d4c41;
+    --bark-light: #a1887f;
+    --bark-soft: #efebe9;
+    --text: #2c1810;
+    --text-mid: #5d4037;
+    --text-light: #a1887f;
+    --shadow: rgba(109,76,65,0.13);
+    --font-size-base: 17px;
+    --font-scale: 1;
+    --radius: 18px;
+    --radius-sm: 10px;
+    --sidebar-w: 78vw;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Noto Sans SC', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    font-size: calc(var(--font-size-base) * var(--font-scale));
+    height: 100dvh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ── OVERLAY ── */
+  #overlay {
+    position: fixed; inset: 0;
+    background: rgba(44,24,16,0.45);
+    z-index: 40;
+    opacity: 0; pointer-events: none;
+    transition: opacity .3s;
+  }
+  #overlay.show { opacity: 1; pointer-events: all; }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-w);
+    background: var(--warm-white);
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform .32s cubic-bezier(.4,0,.2,1);
+    display: flex; flex-direction: column;
+    border-right: 1.5px solid var(--red-mid);
+    overflow: hidden;
+  }
+  #sidebar.open { transform: translateX(0); }
+
+  .sidebar-header {
+    padding: 52px 20px 18px;
+    background: linear-gradient(160deg, var(--red) 0%, #922b21 100%);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .sidebar-logo {
+    width: 44px; height: 44px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+  }
+  .sidebar-title { color: #fff; }
+  .sidebar-title h2 { font-family: 'Noto Serif SC', serif; font-size: 1.15em; font-weight: 700; letter-spacing: .04em; }
+  .sidebar-title p { font-size: 0.72em; opacity: .8; margin-top: 2px; }
+
+  .sidebar-btn {
+    margin: 14px 14px 0;
+    display: flex; align-items: center; gap: 10px;
+    padding: 13px 16px;
+    background: var(--red-soft);
+    border: 1.5px solid var(--red-mid);
+    border-radius: var(--radius-sm);
+    color: var(--red);
+    font-size: 0.92em; font-weight: 600;
+    cursor: pointer; user-select: none;
+    transition: background .15s, transform .1s;
+    font-family: inherit;
+  }
+  .sidebar-btn:active { background: var(--red-mid); transform: scale(.97); }
+  .sidebar-btn svg { flex-shrink: 0; }
+
+  .sidebar-section-title {
+    padding: 16px 18px 6px;
+    font-size: 0.73em;
+    color: var(--text-light);
+    letter-spacing: .06em;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+
+  .history-list { flex: 1; overflow-y: auto; padding: 0 10px; }
+  .history-list::-webkit-scrollbar { width: 3px; }
+  .history-list::-webkit-scrollbar-thumb { background: var(--red-mid); border-radius: 3px; }
+
+  .history-item {
+    padding: 12px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background .15s;
+    border-bottom: 1px solid var(--bark-soft);
+    position: relative;
+  }
+  .history-item:active { background: var(--red-soft); }
+  .history-item.active { background: var(--red-soft); }
+  .history-item .hi-title {
+    font-size: 0.9em; font-weight: 500;
+    color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .history-item .hi-date { font-size: 0.72em; color: var(--text-light); margin-top: 3px; }
+  .history-item .hi-del {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--bark-light); font-size: 14px;
+    opacity: 0; transition: opacity .2s;
+  }
+  .history-item:hover .hi-del, .history-item:active .hi-del { opacity: 1; }
+
+  .sidebar-footer {
+    padding: 10px 14px 28px;
+    border-top: 1px solid var(--bark-soft);
+  }
+  .sidebar-nav-btn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 13px 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.92em; font-weight: 500;
+    color: var(--text-mid);
+    transition: background .15s;
+    user-select: none;
+  }
+  .sidebar-nav-btn:active { background: var(--bark-soft); }
+
+  /* ── MAIN LAYOUT ── */
+  #app {
+    display: flex; flex-direction: column;
+    height: 100dvh;
+    transition: transform .32s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 50px 16px 12px;
+    background: var(--warm-white);
+    border-bottom: 1.5px solid var(--bark-soft);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .topbar-menu {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; background: none; border: none;
+    color: var(--text);
+    transition: background .15s;
+  }
+  .topbar-menu:active { background: var(--bark-soft); }
+  .topbar-center { flex: 1; text-align: center; }
+  .topbar-center h1 {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 1.05em; font-weight: 700;
+    color: var(--text);
+    letter-spacing: .04em;
+  }
+  .topbar-center p { font-size: 0.68em; color: var(--green); font-weight: 500; margin-top: 1px; }
+
+  /* Voice/Text toggle */
+  .output-toggle {
+    display: flex; align-items: center;
+    background: var(--bark-soft);
+    border-radius: 20px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .ot-btn {
+    padding: 6px 11px;
+    border-radius: 17px;
+    border: none; background: none;
+    font-size: 0.72em; font-weight: 600;
+    color: var(--text-light);
+    cursor: pointer; transition: all .2s;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .ot-btn.active {
+    background: var(--red);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(192,57,43,.35);
+  }
+
+  /* ── CHAT AREA ── */
+  .chat-area {
+    flex: 1; overflow-y: auto;
+    padding: 16px 14px 8px;
+    display: flex; flex-direction: column; gap: 14px;
+    background: var(--cream);
+    scroll-behavior: smooth;
+  }
+  .chat-area::-webkit-scrollbar { width: 3px; }
+  .chat-area::-webkit-scrollbar-thumb { background: var(--red-mid); border-radius: 3px; }
+
+  /* Date separator */
+  .date-sep {
+    text-align: center;
+    font-size: 0.7em;
+    color: var(--text-light);
+    background: var(--cream);
+    padding: 2px 10px;
+    border-radius: 10px;
+    align-self: center;
+    letter-spacing: .03em;
+  }
+
+  /* Messages */
+  .msg { display: flex; flex-direction: column; max-width: 86%; animation: msgIn .25s ease; }
+  @keyframes msgIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: none; } }
+
+  .msg.user { align-self: flex-end; align-items: flex-end; }
+  .msg.bot  { align-self: flex-start; align-items: flex-start; }
+
+  .msg-bubble {
+    padding: 12px 16px;
+    border-radius: 18px;
+    line-height: 1.65;
+    font-size: 1em;
+    word-break: break-word;
+    position: relative;
+  }
+  .msg.user .msg-bubble {
+    background: var(--red);
+    color: #fff;
+    border-bottom-right-radius: 5px;
+    box-shadow: 0 2px 10px rgba(192,57,43,.25);
+  }
+  .msg.bot .msg-bubble {
+    background: var(--warm-white);
+    color: var(--text);
+    border-bottom-left-radius: 5px;
+    border: 1.5px solid var(--bark-soft);
+    box-shadow: 0 2px 8px var(--shadow);
+  }
+
+  /* Bot name label */
+  .msg.bot .msg-name {
+    font-size: 0.7em;
+    color: var(--text-light);
+    font-weight: 600;
+    margin-bottom: 4px;
+    padding-left: 4px;
+    letter-spacing: .03em;
+  }
+
+  .msg-time {
+    font-size: 0.68em;
+    color: var(--text-light);
+    margin-top: 4px;
+    padding: 0 4px;
+  }
+
+  /* Voice mode indicator */
+  .msg.bot .msg-bubble.voice-mode::after {
+    content: "🔊";
+    position: absolute;
+    bottom: -10px; right: 10px;
+    font-size: 12px;
+    opacity: .6;
+  }
+
+  /* Typing indicator */
+  .typing-indicator .msg-bubble {
+    padding: 14px 18px;
+  }
+  .dots { display: flex; gap: 5px; align-items: center; }
+  .dot {
+    width: 8px; height: 8px;
+    background: var(--bark-light);
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+  .dot:nth-child(2) { animation-delay: .2s; }
+  .dot:nth-child(3) { animation-delay: .4s; }
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+  /* Welcome card */
+  .welcome-card {
+    margin: 8px 0;
+    padding: 20px 18px;
+    background: linear-gradient(135deg, var(--red-soft) 0%, var(--green-soft) 100%);
+    border: 1.5px solid var(--red-mid);
+    border-radius: var(--radius);
+    text-align: center;
+    align-self: stretch;
+  }
+  .welcome-card .wc-icon { font-size: 2.8em; margin-bottom: 8px; }
+  .welcome-card h3 {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 1.05em; font-weight: 700;
+    color: var(--red); margin-bottom: 6px;
+  }
+  .welcome-card p { font-size: 0.87em; color: var(--text-mid); line-height: 1.6; }
+  .quick-questions { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .qq-btn {
+    padding: 10px 14px;
+    background: var(--warm-white);
+    border: 1.5px solid var(--red-mid);
+    border-radius: var(--radius-sm);
+    color: var(--red);
+    font-size: 0.85em; font-weight: 500;
+    text-align: left; cursor: pointer;
+    font-family: inherit;
+    transition: background .15s, transform .1s;
+  }
+  .qq-btn:active { background: var(--red-soft); transform: scale(.98); }
+
+  /* ── INPUT BAR ── */
+  .input-area {
+    padding: 10px 12px 28px;
+    background: var(--warm-white);
+    border-top: 1.5px solid var(--bark-soft);
+    display: flex; align-items: flex-end; gap: 8px;
+    flex-shrink: 0;
+  }
+  .input-wrap {
+    flex: 1;
+    background: var(--cream);
+    border: 1.5px solid var(--bark-soft);
+    border-radius: 22px;
+    display: flex; align-items: flex-end; gap: 6px;
+    padding: 10px 14px;
+    transition: border-color .2s;
+  }
+  .input-wrap:focus-within { border-color: var(--red-light); }
+  #chatInput {
+    flex: 1; border: none; background: none;
+    font-family: inherit; font-size: 1em;
+    color: var(--text); resize: none;
+    min-height: 24px; max-height: 120px;
+    line-height: 1.5; outline: none;
+  }
+  #chatInput::placeholder { color: var(--text-light); }
+
+  .input-voice-btn {
+    width: 32px; height: 32px;
+    border-radius: 50%; border: none;
+    background: var(--bark-soft);
+    color: var(--text-mid);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0;
+    transition: background .15s;
+  }
+  .input-voice-btn:active { background: var(--red-mid); }
+  .input-voice-btn.recording {
+    background: var(--red);
+    color: #fff;
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,.5)} 50%{box-shadow:0 0 0 8px rgba(192,57,43,0)} }
+
+  .send-btn {
+    width: 46px; height: 46px;
+    border-radius: 50%; border: none;
+    background: var(--red);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0;
+    box-shadow: 0 3px 10px rgba(192,57,43,.4);
+    transition: background .15s, transform .1s;
+  }
+  .send-btn:active { background: #922b21; transform: scale(.93); }
+
+  /* ── SETTINGS PANEL ── */
+  #settingsPanel {
+    position: fixed; inset: 0;
+    background: var(--cream);
+    z-index: 60;
+    transform: translateY(100%);
+    transition: transform .35s cubic-bezier(.4,0,.2,1);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  #settingsPanel.open { transform: translateY(0); }
+
+  .settings-topbar {
+    padding: 52px 16px 14px;
+    background: var(--warm-white);
+    border-bottom: 1.5px solid var(--bark-soft);
+    display: flex; align-items: center; gap: 10px;
+    flex-shrink: 0;
+  }
+  .back-btn {
+    width: 40px; height: 40px;
+    border-radius: 12px; border: none;
+    background: none; color: var(--text);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .back-btn:active { background: var(--bark-soft); }
+  .settings-topbar h2 {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 1.1em; font-weight: 700;
+  }
+
+  .settings-body { flex: 1; overflow-y: auto; padding: 16px 14px 40px; }
+  .settings-body::-webkit-scrollbar { width: 3px; }
+
+  .settings-section {
+    background: var(--warm-white);
+    border-radius: var(--radius);
+    border: 1.5px solid var(--bark-soft);
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+  .settings-section-title {
+    padding: 12px 16px 8px;
+    font-size: 0.73em;
+    font-weight: 700;
+    color: var(--text-light);
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--bark-soft);
+  }
+  .settings-row {
+    padding: 15px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--bark-soft);
+    gap: 12px;
+  }
+  .settings-row:last-child { border-bottom: none; }
+  .sr-label { font-size: 0.93em; font-weight: 500; color: var(--text); }
+  .sr-sub { font-size: 0.74em; color: var(--text-light); margin-top: 2px; }
+
+  /* Font size slider */
+  .font-slider-wrap { width: 100%; margin-top: 4px; }
+  .font-preview {
+    text-align: center; padding: 10px;
+    background: var(--cream); border-radius: var(--radius-sm);
+    color: var(--text); margin-bottom: 10px;
+    border: 1px solid var(--bark-soft);
+    font-size: calc(1em * var(--font-scale));
+    transition: font-size .2s;
+  }
+  .font-size-btns { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .fs-btn {
+    flex: 1; padding: 11px 0;
+    border-radius: var(--radius-sm); border: 1.5px solid var(--bark-soft);
+    background: var(--cream); font-family: inherit;
+    font-size: 0.88em; font-weight: 600; color: var(--text-mid);
+    cursor: pointer; text-align: center;
+    transition: all .15s;
+  }
+  .fs-btn.active {
+    background: var(--red); color: #fff;
+    border-color: var(--red);
+    box-shadow: 0 2px 8px rgba(192,57,43,.3);
+  }
+  .fs-btn:active { transform: scale(.96); }
+
+  /* Toggle switch */
+  .toggle {
+    position: relative;
+    width: 50px; height: 28px; flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-track {
+    position: absolute; inset: 0;
+    background: #ccc; border-radius: 14px;
+    cursor: pointer; transition: background .2s;
+  }
+  .toggle input:checked + .toggle-track { background: var(--red); }
+  .toggle-track::after {
+    content: '';
+    position: absolute; top: 3px; left: 3px;
+    width: 22px; height: 22px;
+    background: #fff; border-radius: 50%;
+    transition: transform .2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,.2);
+  }
+  .toggle input:checked + .toggle-track::after { transform: translateX(22px); }
+
+  /* Input fields */
+  .settings-input {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid var(--bark-soft);
+    border-radius: var(--radius-sm);
+    background: var(--cream);
+    font-family: inherit; font-size: 0.9em; color: var(--text);
+    outline: none; margin-top: 8px;
+    transition: border-color .2s;
+  }
+  .settings-input:focus { border-color: var(--red-light); }
+  .settings-input.password-field { letter-spacing: .15em; }
+  .key-show-btn {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--text-light);
+    font-size: 18px; cursor: pointer; padding: 4px;
+  }
+  .input-relative { position: relative; margin-top: 8px; }
+  .input-relative .settings-input { margin-top: 0; padding-right: 40px; }
+
+  /* Select */
+  .settings-select {
+    padding: 10px 14px;
+    border: 1.5px solid var(--bark-soft);
+    border-radius: var(--radius-sm);
+    background: var(--cream);
+    font-family: inherit; font-size: 0.9em; color: var(--text);
+    outline: none; cursor: pointer;
+    min-width: 130px;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a1887f' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+
+  /* About row */
+  .about-row {
+    padding: 16px;
+    text-align: center;
+    color: var(--text-light);
+    font-size: 0.78em;
+    line-height: 1.7;
+  }
+  .about-logo { font-size: 2.2em; margin-bottom: 6px; }
+  .about-name { font-family: 'Noto Serif SC', serif; font-size: 1.1em; color: var(--red); font-weight: 700; }
+
+  /* ── Voice recording overlay ── */
+  #voiceOverlay {
+    position: fixed; inset: 0;
+    background: rgba(44,24,16,.8);
+    z-index: 70;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+    opacity: 0; pointer-events: none;
+    transition: opacity .2s;
+  }
+  #voiceOverlay.show { opacity: 1; pointer-events: all; }
+  .voice-circle {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: var(--red);
+    display: flex; align-items: center; justify-content: center;
+    animation: voicePulse 1s infinite;
+    box-shadow: 0 0 0 0 rgba(192,57,43,.5);
+  }
+  @keyframes voicePulse {
+    0%  { box-shadow: 0 0 0 0 rgba(192,57,43,.5); }
+    70% { box-shadow: 0 0 0 24px rgba(192,57,43,0); }
+    100%{ box-shadow: 0 0 0 0 rgba(192,57,43,0); }
+  }
+  .voice-text { color: #fff; font-size: 1.1em; font-weight: 500; }
+  .voice-cancel {
+    padding: 12px 32px;
+    background: rgba(255,255,255,.15);
+    border: 1.5px solid rgba(255,255,255,.3);
+    border-radius: 24px;
+    color: #fff; font-family: inherit; font-size: 0.95em;
+    cursor: pointer;
+  }
+
+  /* Scrollbar for settings */
+  .settings-body::-webkit-scrollbar { width: 3px; }
+  .settings-body::-webkit-scrollbar-thumb { background: var(--red-mid); border-radius: 3px; }
+
+  /* helper */
+  .full-settings-row { flex-direction: column; align-items: flex-start; }
+</style>
+</head>
+<body>
+
+<!-- OVERLAY -->
+<div id="overlay" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">🍓</div>
+    <div class="sidebar-title">
+      <h2>草莓管家</h2>
+      <p>GraphRAG 智能问答</p>
+    </div>
+  </div>
+
+  <button class="sidebar-btn" onclick="newChat()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    新建对话
+  </button>
+
+  <div class="sidebar-section-title">历史记录</div>
+  <div class="history-list" id="historyList">
+    <div class="history-item active" onclick="loadHistory(0)">
+      <div class="hi-title">草莓根腐病怎么处理？</div>
+      <div class="hi-date">今天 14:32</div>
+      <div class="hi-del" onclick="deleteHistory(event,0)">×</div>
+    </div>
+    <div class="history-item" onclick="loadHistory(1)">
+      <div class="hi-title">红颜草莓和章姬的区别</div>
+      <div class="hi-date">昨天 09:15</div>
+      <div class="hi-del" onclick="deleteHistory(event,1)">×</div>
+    </div>
+    <div class="history-item" onclick="loadHistory(2)">
+      <div class="hi-title">草莓授粉期间注意事项</div>
+      <div class="hi-date">3天前</div>
+      <div class="hi-del" onclick="deleteHistory(event,2)">×</div>
+    </div>
+    <div class="history-item" onclick="loadHistory(3)">
+      <div class="hi-title">大棚温度控制方法</div>
+      <div class="hi-date">上周</div>
+      <div class="hi-del" onclick="deleteHistory(event,3)">×</div>
+    </div>
+    <div class="history-item" onclick="loadHistory(4)">
+      <div class="hi-title">草莓种植基地施肥方案</div>
+      <div class="hi-date">2025/12/01</div>
+      <div class="hi-del" onclick="deleteHistory(event,4)">×</div>
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-nav-btn" onclick="openSettings()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      设置
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <button class="topbar-menu" onclick="openSidebar()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="topbar-center">
+      <h1>🍓 草莓管家</h1>
+      <p>● 知识库已就绪</p>
+    </div>
+    <div class="output-toggle">
+      <button class="ot-btn active" id="btnText" onclick="setOutputMode('text')">文字</button>
+      <button class="ot-btn" id="btnVoice" onclick="setOutputMode('voice')">语音</button>
+    </div>
+  </div>
+
+  <!-- CHAT AREA -->
+  <div class="chat-area" id="chatArea">
+    <div class="date-sep">今天 · 2026年3月11日</div>
+
+    <!-- Welcome Card -->
+    <div class="welcome-card">
+      <div class="wc-icon">🍓</div>
+      <h3>您好！我是草莓管家</h3>
+      <p>基于 GraphRAG 知识库，专为草莓种植提供精准解答。有什么想问的，直接说！</p>
+      <div class="quick-questions">
+        <button class="qq-btn" onclick="quickSend('草莓常见病虫害有哪些？')">🌿 草莓常见病虫害有哪些？</button>
+        <button class="qq-btn" onclick="quickSend('大棚草莓怎么控温保湿？')">🌡️ 大棚草莓怎么控温保湿？</button>
+        <button class="qq-btn" onclick="quickSend('草莓什么时候施肥效果最好？')">🌱 草莓什么时候施肥效果最好？</button>
+      </div>
+    </div>
+
+    <!-- Sample conversation -->
+    <div class="msg user">
+      <div class="msg-bubble">草莓根腐病怎么处理？</div>
+      <div class="msg-time">14:28</div>
+    </div>
+
+    <div class="msg bot">
+      <div class="msg-name">草莓管家</div>
+      <div class="msg-bubble">
+        草莓根腐病主要由疫霉菌引起，处理方法如下：<br><br>
+        <b>发病初期：</b>及时拔除病株，用石灰粉对病穴消毒，防止扩散。<br><br>
+        <b>药剂防治：</b>可用甲霜灵·锰锌或烯酰吗啉灌根，每7天一次，连续2～3次。<br><br>
+        <b>预防为主：</b>避免大水漫灌，保持良好通风，选用抗病品种效果更好。
+      </div>
+      <div class="msg-time">14:29</div>
+    </div>
+  </div>
+
+  <!-- INPUT BAR -->
+  <div class="input-area">
+    <div class="input-wrap">
+      <textarea id="chatInput" placeholder="问问草莓管家…" rows="1"
+        oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
+      <button class="input-voice-btn" id="voiceInputBtn" onclick="toggleRecording()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      </button>
+    </div>
+    <button class="send-btn" onclick="sendMessage()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- SETTINGS PANEL -->
+<div id="settingsPanel">
+  <div class="settings-topbar">
+    <button class="back-btn" onclick="closeSettings()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <h2>设置</h2>
+  </div>
+
+  <div class="settings-body">
+    <!-- 显示 -->
+    <div class="settings-section">
+      <div class="settings-section-title">显示</div>
+      <div class="settings-row full-settings-row">
+        <div>
+          <div class="sr-label">字体大小</div>
+          <div class="sr-sub">调整后全局生效</div>
+        </div>
+        <div class="font-slider-wrap">
+          <div class="font-preview" id="fontPreview">草莓管家，您好！</div>
+          <div class="font-size-btns">
+            <button class="fs-btn" onclick="setFontSize('small')">小</button>
+            <button class="fs-btn active" id="fs-normal" onclick="setFontSize('normal')">标准</button>
+            <button class="fs-btn" onclick="setFontSize('large')">大</button>
+            <button class="fs-btn" onclick="setFontSize('xlarge')">特大</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI模型 -->
+    <div class="settings-section">
+      <div class="settings-section-title">大模型配置</div>
+      <div class="settings-row full-settings-row">
+        <div class="sr-label">API 密钥（Key）</div>
+        <div class="input-relative" style="width:100%">
+          <input type="password" class="settings-input password-field" id="apiKey"
+            placeholder="sk-xxxxxxxxxxxxxxxx" value="sk-demo123456789">
+          <button class="key-show-btn" onclick="toggleKeyVisibility('apiKey', this)">👁</button>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div><div class="sr-label">模型选择</div><div class="sr-sub">推荐使用 DeepSeek</div></div>
+        <select class="settings-select">
+          <option>DeepSeek-V3</option>
+          <option>DeepSeek-R1</option>
+          <option>GPT-4o</option>
+          <option>Qwen-Plus</option>
+        </select>
+      </div>
+      <div class="settings-row full-settings-row">
+        <div class="sr-label">API 地址</div>
+        <input type="text" class="settings-input" placeholder="https://api.deepseek.com/v1"
+          value="https://api.deepseek.com/v1">
+      </div>
+    </div>
+
+    <!-- 语音 -->
+    <div class="settings-section">
+      <div class="settings-section-title">语音设置</div>
+      <div class="settings-row">
+        <div><div class="sr-label">语音输出</div><div class="sr-sub">回答自动朗读</div></div>
+        <label class="toggle"><input type="checkbox" id="voiceOutputToggle"><div class="toggle-track"></div></label>
+      </div>
+      <div class="settings-row">
+        <div><div class="sr-label">语音输入</div><div class="sr-sub">长按麦克风说话</div></div>
+        <label class="toggle"><input type="checkbox" id="voiceInputToggle" checked><div class="toggle-track"></div></label>
+      </div>
+      <div class="settings-row">
+        <div><div class="sr-label">朗读语速</div></div>
+        <select class="settings-select">
+          <option>慢速</option>
+          <option selected>正常</option>
+          <option>较快</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <div><div class="sr-label">发音人</div></div>
+        <select class="settings-select">
+          <option selected>普通话女声</option>
+          <option>普通话男声</option>
+          <option>方言·四川</option>
+        </select>
+      </div>
+      <div class="settings-row full-settings-row">
+        <div class="sr-label">语音识别 Key</div>
+        <div class="input-relative" style="width:100%">
+          <input type="password" class="settings-input" id="asrKey"
+            placeholder="语音识别服务密钥（可选）">
+          <button class="key-show-btn" onclick="toggleKeyVisibility('asrKey', this)">👁</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 关于 -->
+    <div class="settings-section">
+      <div class="about-row">
+        <div class="about-logo">🍓</div>
+        <div class="about-name">草莓管家</div>
+        <div style="margin-top:4px">版本 1.0.0 · GraphRAG 驱动</div>
+        <div style="margin-top:2px">专为草莓种植户打造</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VOICE OVERLAY -->
+<div id="voiceOverlay">
+  <div class="voice-circle">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+  </div>
+  <div class="voice-text">正在听… 说完后松开</div>
+  <button class="voice-cancel" onclick="stopRecording()">取消</button>
+</div>
+
+<script>
+  // ── Sidebar ──
+  function openSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('overlay').classList.add('show');
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('show');
+  }
+
+  // ── Settings ──
+  function openSettings() {
+    closeSidebar();
+    setTimeout(() => document.getElementById('settingsPanel').classList.add('open'), 100);
+  }
+  function closeSettings() {
+    document.getElementById('settingsPanel').classList.remove('open');
+  }
+
+  // ── New Chat ──
+  function newChat() {
+    closeSidebar();
+    const area = document.getElementById('chatArea');
+    area.innerHTML = `
+      <div class="date-sep">今天 · ${new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'})}</div>
+      <div class="welcome-card">
+        <div class="wc-icon">🍓</div>
+        <h3>新对话开始了！</h3>
+        <p>有什么关于草莓种植的问题，尽管问我～</p>
+        <div class="quick-questions">
+          <button class="qq-btn" onclick="quickSend('草莓常见病虫害有哪些？')">🌿 草莓常见病虫害有哪些？</button>
+          <button class="qq-btn" onclick="quickSend('大棚草莓怎么控温保湿？')">🌡️ 大棚草莓怎么控温保湿？</button>
+          <button class="qq-btn" onclick="quickSend('草莓什么时候施肥效果最好？')">🌱 草莓什么时候施肥效果最好？</button>
+        </div>
+      </div>`;
+    document.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
+  }
+
+  // ── History ──
+  function loadHistory(idx) {
+    closeSidebar();
+    document.querySelectorAll('.history-item').forEach((el, i) => {
+      el.classList.toggle('active', i === idx);
+    });
+  }
+  function deleteHistory(e, idx) {
+    e.stopPropagation();
+    const items = document.querySelectorAll('.history-item');
+    if (items[idx]) {
+      items[idx].style.transition = 'opacity .2s, max-height .25s';
+      items[idx].style.opacity = '0';
+      items[idx].style.maxHeight = '0';
+      items[idx].style.overflow = 'hidden';
+      setTimeout(() => items[idx].remove(), 250);
+    }
+  }
+
+  // ── Output Mode ──
+  let outputMode = 'text';
+  function setOutputMode(mode) {
+    outputMode = mode;
+    document.getElementById('btnText').classList.toggle('active', mode === 'text');
+    document.getElementById('btnVoice').classList.toggle('active', mode === 'voice');
+  }
+
+  // ── Font Size ──
+  const fontScales = { small: 0.88, normal: 1, large: 1.15, xlarge: 1.3 };
+  function setFontSize(size) {
+    const scale = fontScales[size];
+    document.documentElement.style.setProperty('--font-scale', scale);
+    document.getElementById('fontPreview').style.fontSize = `calc(1em * ${scale})`;
+    document.querySelectorAll('.fs-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+  }
+
+  // ── Key Visibility ──
+  function toggleKeyVisibility(id, btn) {
+    const inp = document.getElementById(id);
+    if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+    else { inp.type = 'password'; btn.textContent = '👁'; }
+  }
+
+  // ── Send Message ──
+  function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    appendUserMessage(text);
+    input.value = '';
+    input.style.height = 'auto';
+    showTyping();
+    setTimeout(() => {
+      removeTyping();
+      appendBotMessage(mockReply(text));
+    }, 1500 + Math.random() * 800);
+  }
+
+  function quickSend(text) {
+    appendUserMessage(text);
+    showTyping();
+    setTimeout(() => {
+      removeTyping();
+      appendBotMessage(mockReply(text));
+    }, 1600);
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  function appendUserMessage(text) {
+    const area = document.getElementById('chatArea');
+    const now = new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+    const div = document.createElement('div');
+    div.className = 'msg user';
+    div.innerHTML = `<div class="msg-bubble">${escHtml(text)}</div><div class="msg-time">${now}</div>`;
+    area.appendChild(div);
+    scrollChat();
+  }
+
+  function appendBotMessage(text) {
+    const area = document.getElementById('chatArea');
+    const now = new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+    const div = document.createElement('div');
+    div.className = 'msg bot';
+    const voiceClass = outputMode === 'voice' ? ' voice-mode' : '';
+    div.innerHTML = `<div class="msg-name">草莓管家</div><div class="msg-bubble${voiceClass}">${text}</div><div class="msg-time">${now}</div>`;
+    area.appendChild(div);
+    scrollChat();
+  }
+
+  function showTyping() {
+    const area = document.getElementById('chatArea');
+    const div = document.createElement('div');
+    div.className = 'msg bot typing-indicator';
+    div.id = 'typingIndicator';
+    div.innerHTML = `<div class="msg-name">草莓管家</div><div class="msg-bubble"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+    area.appendChild(div);
+    scrollChat();
+  }
+
+  function removeTyping() {
+    const t = document.getElementById('typingIndicator');
+    if (t) t.remove();
+  }
+
+  function scrollChat() {
+    const area = document.getElementById('chatArea');
+    setTimeout(() => area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' }), 50);
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function mockReply(q) {
+    const replies = [
+      '这个问题问得很好！根据草莓种植知识库，建议您重点关注土壤湿度和通风情况，保持适当的水分可以有效预防多种问题。',
+      '从知识库检索到相关信息：草莓对温度比较敏感，白天控制在20～25°C，夜间保持8～12°C，有利于花芽分化和果实着色。',
+      '根据GraphRAG知识库分析，建议分阶段处理：先解决当前问题，再做预防性措施，效果更好。如需详细方案，可以告诉我具体情况。',
+      '这在草莓种植中很常见！通常可以通过调整种植密度、改善排水条件来解决，具体还要结合您的大棚实际情况。',
+    ];
+    return replies[Math.floor(Math.random() * replies.length)];
+  }
+
+  // ── Voice ──
+  let recording = false;
+  function toggleRecording() {
+    if (!recording) startRecording();
+    else stopRecording();
+  }
+  function startRecording() {
+    recording = true;
+    document.getElementById('voiceInputBtn').classList.add('recording');
+    document.getElementById('voiceOverlay').classList.add('show');
+  }
+  function stopRecording() {
+    recording = false;
+    document.getElementById('voiceInputBtn').classList.remove('recording');
+    document.getElementById('voiceOverlay').classList.remove('show');
+    // Simulate recognized text
+    const demo = ['草莓叶子发黄怎么办', '大棚里需要多浇水吗', '草莓什么时候成熟'];
+    document.getElementById('chatInput').value = demo[Math.floor(Math.random() * demo.length)];
+    autoResize(document.getElementById('chatInput'));
+  }
+</script>
+</body>
+</html>

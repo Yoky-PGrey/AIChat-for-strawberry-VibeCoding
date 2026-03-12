@@ -42,24 +42,26 @@
           </view>
         </view>
 
-        <!-- 消息列表 -->
-        <view 
-          v-for="msg in store.messages" 
-          :key="msg.id" 
-          class="msg animate-msg-in"
-          :class="msg.role === 'user' ? 'user' : 'bot'"
-        >
-          <text v-if="msg.role === 'assistant'" class="msg-name">草莓管家</text>
-          <view class="msg-bubble">
-            <text v-if="!msg.loading">{{ msg.content }}</text>
-            <!-- 正在输入动画 -->
-            <view v-else class="dots">
-              <view class="dot"></view>
-              <view class="dot"></view>
-              <view class="dot"></view>
+        <!-- 消息列表容器 -->
+        <view class="messages-container">
+          <view 
+            v-for="msg in store.messages" 
+            :key="msg.id" 
+            class="msg animate-msg-in"
+            :class="msg.role === 'user' ? 'user' : 'bot'"
+          >
+            <text v-if="msg.role === 'assistant'" class="msg-name">草莓管家</text>
+            <view class="msg-bubble">
+              <text v-if="!msg.loading" selectable>{{ msg.content }}</text>
+              <!-- 正在输入动画 -->
+              <view v-else class="dots">
+                <view class="dot"></view>
+                <view class="dot"></view>
+                <view class="dot"></view>
+              </view>
             </view>
+            <text class="msg-time">{{ msg.time }}</text>
           </view>
-          <text class="msg-time">{{ msg.time }}</text>
         </view>
         
         <view style="height: 40rpx;"></view>
@@ -109,7 +111,7 @@
 import { ref, onMounted, nextTick, computed } from 'vue'
 import { useChatStore } from '@/store/chat.js'
 import { queryKnowledge, buildPrompt } from '@/utils/knowledge.js'
-import { streamChat } from '@/utils/deepseek.js'
+import { streamChat } from '@/utils/llm/index.js'
 import SideDrawer from '@/components/side-drawer.vue'
 
 export default {
@@ -272,8 +274,15 @@ export default {
 }
 
 .chat-content-wrapper {
-  padding: 0 28rpx;
+  padding: 0 40rpx; /* 统一对话区水平内边距 */
   width: 100%;
+  box-sizing: border-box;
+}
+
+.messages-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .date-sep {
@@ -298,7 +307,7 @@ export default {
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .wc-icon { font-size: 100rpx; margin-bottom: 20rpx; }
@@ -339,48 +348,54 @@ export default {
 .msg {
   display: flex;
   flex-direction: column;
-  max-width: 88%;
-  margin-bottom: 36rpx;
+  width: 100%; 
+  margin-bottom: 40rpx;
 }
 
-.msg.user { align-self: flex-end; align-items: flex-end; }
-.msg.bot { align-self: flex-start; align-items: flex-start; }
+.msg.user { align-items: flex-end; }
+.msg.bot { align-items: flex-start; }
 
 .msg-name {
   font-size: 24rpx;
   color: #a1887f;
   font-weight: 600;
   margin-bottom: 10rpx;
-  padding-left: 8rpx;
 }
 
 .msg-bubble {
-  padding: 24rpx 36rpx;
-  border-radius: 36rpx;
+  padding: 24rpx 32rpx;
+  border-radius: 32rpx;
   font-size: 32rpx;
   line-height: 1.6;
+  width: fit-content;
+  max-width: 100%; 
+  box-sizing: border-box;
+  word-break: break-word;
 }
 
 .msg.user .msg-bubble {
   background: #c0392b;
   color: #fff;
-  border-bottom-right-radius: 12rpx;
-  box-shadow: 0 6rpx 24rpx rgba(192, 57, 43, 0.2);
+  border-bottom-right-radius: 8rpx;
+  box-shadow: 0 6rpx 20rpx rgba(192, 57, 43, 0.15);
 }
 
 .msg.bot .msg-bubble {
   background: #fffcf7;
   color: #2c1810;
-  border-bottom-left-radius: 12rpx;
+  border-bottom-left-radius: 8rpx;
   border: 3rpx solid #efebe9;
-  box-shadow: 0 4rpx 16rpx rgba(109, 76, 65, 0.1);
+  box-shadow: 0 4rpx 12rpx rgba(109, 76, 65, 0.05);
 }
 
 .msg-time {
   font-size: 22rpx;
   color: #a1887f;
   margin-top: 12rpx;
-  padding: 0 12rpx;
+}
+
+.msg.user .msg-time {
+  text-align: right;
 }
 
 /* 正在输入动画 */

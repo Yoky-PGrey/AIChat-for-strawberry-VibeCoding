@@ -9,7 +9,16 @@ export const useChatStore = defineStore('chat', {
     autoSpeak:  true,      // AI回复自动朗读
     sessionId:  Date.now(), // 当前会话ID
     loadingStage: 'idle',  // 'idle' | 'kb_query' | 'ai_processing' | 'streaming'
-    loadingProgress: 0     // 0-100
+    loadingProgress: 0,    // 0-100
+    
+    // 模型配置
+    currentModel: 'deepseek', // 'deepseek' | 'kimi' | 'qwen'
+    config: {
+      deepseek: { key: '', url: 'https://api.deepseek.com/v1' },
+      kimi:     { key: '', url: 'https://api.moonshot.cn/v1' },
+      qwen:     { key: '', url: 'https://dashscope.aliyuncs.com/compatible-mode/v1' }
+    },
+    kbUrl: ''
   }),
 
   getters: {
@@ -18,10 +27,46 @@ export const useChatStore = defineStore('chat', {
       s.messages
         .filter(m => !m.loading && m.content)
         .map(({ role, content }) => ({ role, content }))
-        .slice(-20)
+        .slice(-20),
+    activeConfig: (s) => s.config[s.currentModel] || s.config.deepseek
   },
 
   actions: {
+    // ... existing actions ...
+    load() {
+      try {
+        const raw = uni.getStorageSync('chat_msgs')
+        if (raw) this.messages = JSON.parse(raw)
+      } catch (_) {}
+      this.autoSpeak = uni.getStorageSync('auto_speak') !== false
+      this.fontSize  = uni.getStorageSync('font_size') || 'md'
+      
+      // 加载模型配置
+      this.currentModel = uni.getStorageSync('current_model') || 'deepseek'
+      const savedConfig = uni.getStorageSync('models_config')
+      if (savedConfig) {
+        try {
+          const parsed = JSON.parse(savedConfig)
+          this.config = { ...this.config, ...parsed }
+        } catch (e) {}
+      }
+      this.kbUrl = uni.getStorageSync('kb_url') || ''
+    },
+    setModel(model) {
+      this.currentModel = model
+      uni.setStorageSync('current_model', model)
+    },
+    updateConfig(model, { key, url }) {
+      if (this.config[model]) {
+        if (key !== undefined) this.config[model].key = key
+        if (url !== undefined) this.config[model].url = url
+        uni.setStorageSync('models_config', JSON.stringify(this.config))
+      }
+    },
+    setKbUrl(url) {
+      this.kbUrl = url
+      uni.setStorageSync('kb_url', url)
+    },
     addUser(content) {
       const m = this._msg('user', content)
       this.messages.push(m)
@@ -47,14 +92,6 @@ export const useChatStore = defineStore('chat', {
       this.messages = []
       this.sessionId = Date.now()
       uni.removeStorageSync('chat_msgs')
-    },
-    load() {
-      try {
-        const raw = uni.getStorageSync('chat_msgs')
-        if (raw) this.messages = JSON.parse(raw)
-      } catch (_) {}
-      this.autoSpeak = uni.getStorageSync('auto_speak') !== false
-      this.fontSize  = uni.getStorageSync('font_size') || 'md'
     },
     setFontSize(v) {
       this.fontSize = v

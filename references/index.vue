@@ -64,7 +64,7 @@ const assistants = [
 ];
 
 const baseUrl = 'http://localhost:8080';
-const API_KEY = 'sk-1fc17fadbc4e44cbbe596c750b90cd7c';
+const API_KEY = '';
 
 function getHeaders() {
 	const token = getToken();

@@ -5,7 +5,7 @@
     @tap="handleBackdropTap"
   >
     <view class="drawer-content" @tap.stop>
-      <!-- 顶部栏 (同步 HTML 设计) -->
+      <!-- 顶部栏 -->
       <view class="drawer-header">
         <view class="logo-box">🍓</view>
         <view class="title-box">
@@ -21,24 +21,26 @@
       </view>
 
       <!-- 对话记录 -->
-      <view class="section-label">历史记录</view>
-      <scroll-view scroll-y class="history-list">
-        <view
-          v-for="(item, idx) in historyList"
-          :key="idx"
-          class="history-item"
-          :class="{ 'history-active': currentPage === 'chat' && idx === 0 }"
-          @tap="openHistory(item.id)"
-        >
-          <view class="hi-content">
-            <text class="hi-title">{{ item.title }}</text>
-            <text class="hi-date">{{ item.date || '今天 14:32' }}</text>
+      <template v-if="historySessions.length > 0">
+        <view class="section-label">历史记录</view>
+        <scroll-view scroll-y class="history-list">
+          <view
+            v-for="item in historySessions"
+            :key="item.id"
+            class="history-item"
+            :class="{ 'history-active': store.sessionId === item.id }"
+            @tap="openHistory(item.id)"
+          >
+            <view class="hi-content">
+              <text class="hi-title">{{ item.title }}</text>
+              <text class="hi-date">{{ item.date }}</text>
+            </view>
+            <view class="hi-del" @tap.stop="deleteHistory(item.id)">
+              <i class="ri-close-line"></i>
+            </view>
           </view>
-          <view class="hi-del" @tap.stop="deleteHistory(idx)">
-            <i class="ri-close-line"></i>
-          </view>
-        </view>
-      </scroll-view>
+        </scroll-view>
+      </template>
 
       <!-- 底部设置区 -->
       <view class="drawer-footer">
@@ -52,7 +54,8 @@
 </template>
 
 <script>
-import { ref } from 'vue'
+import { computed } from 'vue'
+import { useChatStore } from '../store/chat.js'
 
 export default {
   name: 'SideDrawer',
@@ -62,16 +65,16 @@ export default {
   },
   emits: ['close', 'navigate'],
   setup(props, { emit }) {
-    const historyList = ref([
-      { id: 1, title: '草莓根腐病怎么处理？', date: '今天 14:32' },
-      { id: 2, title: '红颜草莓和章姬的区别', date: '昨天 09:15' },
-      { id: 3, title: '草莓授粉期间注意事项', date: '3天前' }
-    ])
+    const store = useChatStore()
+
+    const historySessions = computed(() => {
+      return store.historySessions || []
+    })
 
     function navigate(page) {
       emit('navigate', page)
       if (page === 'home') {
-        uni.reLaunch({ url: '/pages/home/home' })
+        close()
       } else if (page === 'settings') {
         uni.navigateTo({ url: '/pages/settings/settings' })
         close()
@@ -79,8 +82,8 @@ export default {
     }
 
     function newChat() {
-      emit('navigate', 'home')
-      uni.reLaunch({ url: '/pages/home/home' })
+      store.createNewSession()
+      close()
     }
 
     function close() {
@@ -92,15 +95,24 @@ export default {
     }
 
     function openHistory(id) {
-      emit('navigate', 'home')
+      store.switchSession(id)
       close()
     }
 
-    function deleteHistory(idx) {
-      historyList.value.splice(idx, 1)
+    function deleteHistory(id) {
+      uni.showModal({
+        title: '提示',
+        content: '确定要删除这段对话吗？',
+        confirmColor: '#c0392b',
+        success: (res) => {
+          if (res.confirm) {
+            store.deleteSession(id)
+          }
+        }
+      })
     }
 
-    return { historyList, navigate, newChat, close, handleBackdropTap, openHistory, deleteHistory }
+    return { store, historySessions, navigate, newChat, close, handleBackdropTap, openHistory, deleteHistory }
   }
 }
 </script>
@@ -112,34 +124,35 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 9999;
+  z-index: 990;
   pointer-events: none;
   background: rgba(44, 24, 16, 0);
   transition: background 0.3s;
 }
 
-.drawer-open {
-  pointer-events: auto;
-  background: rgba(44, 24, 16, 0.45);
+.side-drawer.drawer-open {
+  pointer-events: auto !important;
+  background: rgba(44, 24, 16, 0.45) !important;
 }
 
 .drawer-content {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   bottom: 0;
-  width: 78vw;
-  background: #fffcf7; /* $warm-white */
+  width: 600rpx;
+  background: #fffcf7;
   display: flex;
   flex-direction: column;
   transform: translateX(-100%);
-  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
-  border-right: 3rpx solid #f5b7b1; /* $red-mid */
+  transition: transform 0.3s ease;
+  border-right: 3rpx solid #f5b7b1;
   overflow: hidden;
+  z-index: 991;
 }
 
-.drawer-open .drawer-content {
-  transform: translateX(0);
+.side-drawer.drawer-open .drawer-content {
+  transform: translateX(0) !important;
 }
 
 /* ── 顶部栏 ── */
@@ -189,8 +202,8 @@ export default {
   align-items: center;
   gap: 20rpx;
   padding: 28rpx 36rpx;
-  background: #fdecea; /* $red-soft */
-  border: 3rpx solid #f5b7b1; /* $red-mid */
+  background: #fdecea;
+  border: 3rpx solid #f5b7b1;
   border-radius: 24rpx;
   transition: background 0.15s, transform 0.1s;
 }
@@ -276,10 +289,17 @@ export default {
   opacity: 0.5;
 }
 
+.empty-history {
+  padding: 60rpx 0;
+  text-align: center;
+  font-size: 26rpx;
+  color: #a1887f;
+}
+
 /* ── 底部设置区 ── */
 .drawer-footer {
   padding: 24rpx 28rpx;
-  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+  padding-bottom: calc(40rpx + env(safe-area-inset-top));
   border-top: 1rpx solid #efebe9;
 }
 

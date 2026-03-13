@@ -5,7 +5,10 @@
 			<view class="back-btn" @tap="goBack">
 				<i class="ri-arrow-left-s-line back-icon"></i>
 			</view>
-			<text class="topbar-title">设置</text>
+			<view class="topbar-center">
+				<text class="topbar-title">设置</text>
+			</view>
+			<view class="topbar-right-placeholder"></view>
 		</view>
 
 		<scroll-view scroll-y class="settings-body">
@@ -23,61 +26,6 @@
 							<view v-for="f in fontOptions" :key="f.key" class="fs-btn" :class="{ active: store.fontSize === f.key }" @tap="store.setFontSize(f.key)">{{ f.label }}</view>
 						</view>
 					</view>
-				</view>
-			</view>
-
-			<!-- AI模型配置 -->
-			<view class="settings-section">
-				<view class="section-title">大模型配置</view>
-				<view class="settings-card">
-					<view class="settings-row">
-						<view>
-							<text class="sr-label">模型选择</text>
-							<text class="sr-sub">推荐使用 DeepSeek</text>
-						</view>
-						<picker :range="modelNames" @change="onModelChange">
-							<view class="settings-select">{{ modelNames[modelIndex] }}</view>
-						</picker>
-					</view>
-					<view class="settings-row col">
-						<text class="sr-label">API 密钥 (Key)</text>
-						<view class="input-relative">
-							<textarea
-								:value="apiKey"
-								@input="onApiKeyInput"
-								class="settings-input-text"
-								:password="!showKey"
-								placeholder="请输入 API Key"
-								auto-height
-								:fixed="true"
-							/>
-							<view class="key-show-btn" @tap="showKey = !showKey">
-								<i :class="showKey ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
-							</view>
-						</view>
-					</view>
-					<view class="settings-row col">
-						<text class="sr-label">API 地址</text>
-						<textarea :value="apiUrl" @input="onApiUrlInput" class="settings-input-text" placeholder="请输入 API 地址" auto-height :fixed="true" />
-					</view>
-				</view>
-			</view>
-
-			<!-- 知识库配置 -->
-			<view class="settings-section">
-				<view class="section-title">知识库配置</view>
-				<view class="settings-card">
-					<view class="settings-row col">
-						<text class="sr-label">GraphRAG 服务地址</text>
-						<textarea :value="kbUrl" @input="onKbUrlInput" class="settings-input-text" placeholder="http://192.168.x.x:8000/query" auto-height :fixed="true" />
-					</view>
-					<view class="settings-row">
-						<text class="sr-label">连接状态</text>
-						<text :class="kbStatus.ok ? 'st-ok' : 'st-off'">{{ kbStatus.text }}</text>
-					</view>
-				</view>
-				<view class="test-btn" @tap="testKb">
-					<text>🔗 测试知识库连接</text>
 				</view>
 			</view>
 
@@ -99,6 +47,55 @@
 						</view>
 						<switch checked color="#c0392b" />
 					</view>
+				</view>
+			</view>
+
+			<!-- AI模型配置 -->
+			<view class="settings-section">
+				<view class="section-title">大模型配置</view>
+				<view class="settings-card">
+					<view class="settings-row">
+						<view>
+							<text class="sr-label">模型选择</text>
+							<text class="sr-sub">推荐使用 DeepSeek</text>
+						</view>
+						<picker :range="modelNames" @change="onModelChange">
+							<view class="settings-select">{{ modelNames[modelIndex] }}</view>
+						</picker>
+					</view>
+					<view class="settings-row col">
+						<text class="sr-label">API 密钥 (Key)</text>
+						<view class="input-relative">
+							<input
+								:value="apiKey"
+								@input="onApiKeyInput"
+								class="settings-input-text"
+								:password="!showKey"
+								placeholder="请输入 API Key"
+							/>
+							<view class="key-show-btn" @tap="showKey = !showKey">
+								<i :class="showKey ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
+							</view>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<!-- 知识库配置 -->
+			<view class="settings-section">
+				<view class="section-title">知识库配置</view>
+				<view class="settings-card">
+					<view class="settings-row col">
+						<text class="sr-label">GraphRAG 服务地址</text>
+						<input :value="kbUrl" @input="onKbUrlInput" class="settings-input-text" placeholder="http://192.168.x.x:8000/query" />
+					</view>
+					<view class="settings-row">
+						<text class="sr-label">连接状态</text>
+						<text :class="kbStatus.ok ? 'st-ok' : 'st-off'">{{ kbStatus.text }}</text>
+					</view>
+				</view>
+				<view class="test-btn" @tap="testKb">
+					<text>🔗 测试知识库连接</text>
 				</view>
 			</view>
 
@@ -141,7 +138,6 @@ export default {
 
 		// 临时响应式变量，用于输入框编辑
 		const apiKey = ref('');
-		const apiUrl = ref('');
 		const kbUrl = ref('');
 
 		const fontOptions = [
@@ -164,7 +160,6 @@ export default {
 		function syncLocalState() {
 			const config = store.activeConfig;
 			apiKey.value = config.key;
-			apiUrl.value = config.url;
 			kbUrl.value = store.kbUrl;
 		}
 
@@ -177,10 +172,6 @@ export default {
 			apiKey.value = e.detail.value;
 		}
 
-		function onApiUrlInput(e) {
-			apiUrl.value = e.detail.value;
-		}
-
 		function onKbUrlInput(e) {
 			kbUrl.value = e.detail.value;
 		}
@@ -188,8 +179,7 @@ export default {
 		function save() {
 			// 更新当前模型的配置
 			store.updateConfig(store.currentModel, {
-				key: apiKey.value.trim(),
-				url: apiUrl.value.trim()
+				key: apiKey.value.trim()
 			});
 			// 更新知识库地址
 			store.setKbUrl(kbUrl.value.trim());
@@ -213,16 +203,21 @@ export default {
 				return;
 			}
 			kbStatus.value = { ok: false, text: '测试中…' };
-			try {
-				const r = await fetch(url, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ query: '草莓', method: 'local', top_k: 1 })
-				});
-				kbStatus.value = r.ok ? { ok: true, text: '连接成功 ✅' } : { ok: false, text: '失败 ❌' };
-			} catch {
-				kbStatus.value = { ok: false, text: '无法连接 ❌' };
-			}
+			
+			uni.request({
+				url: url,
+				method: 'POST',
+				header: { 'Content-Type': 'application/json' },
+				data: { query: '草莓', method: 'local', top_k: 1 },
+				success: (res) => {
+					kbStatus.value = (res.statusCode >= 200 && res.statusCode < 300) 
+						? { ok: true, text: '连接成功 ✅' } 
+						: { ok: false, text: '失败 ❌' };
+				},
+				fail: () => {
+					kbStatus.value = { ok: false, text: '无法连接 ❌' };
+				}
+			});
 		}
 
 		function goBack() {
@@ -232,7 +227,6 @@ export default {
 		return {
 			store,
 			apiKey,
-			apiUrl,
 			kbUrl,
 			showKey,
 			kbStatus,
@@ -241,7 +235,6 @@ export default {
 			fontOptions,
 			onModelChange,
 			onApiKeyInput,
-			onApiUrlInput,
 			onKbUrlInput,
 			save,
 			testKb,
@@ -261,34 +254,53 @@ export default {
 }
 
 .settings-topbar {
-	padding: 20rpx 32rpx 28rpx;
-	padding-top: calc(20rpx + env(safe-area-inset-top));
+	padding-top: env(safe-area-inset-top, 0px);
+	min-height: calc(140rpx + env(safe-area-inset-top, 0px));
 	background: #fffcf7;
 	border-bottom: 3rpx solid #efebe9;
 	display: flex;
 	align-items: center;
-	gap: 20rpx;
-	min-height: 88rpx;
+	justify-content: space-between;
+	position: relative;
+	box-sizing: border-box;
+	flex-shrink: 0;
+	z-index: 10;
 }
 
 .back-btn {
-	width: 80rpx;
-	height: 80rpx;
-	border-radius: 24rpx;
+	width: 72rpx;
+	height: 72rpx;
+	border-radius: 20rpx;
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	background: #fdf6ec;
+	border: 1rpx solid #efebe9;
+	margin-left: 32rpx;
 }
 
 .back-icon {
-	font-size: 52rpx;
+	font-size: 44rpx;
 	color: #2c1810;
 }
 
+.topbar-center {
+	flex: 1;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
 .topbar-title {
-	font-size: 36rpx;
-	font-weight: 700;
+	font-size: 34rpx;
+	font-weight: 800;
 	color: #2c1810;
+	letter-spacing: 2rpx;
+}
+
+.topbar-right-placeholder {
+	width: 72rpx;
+	margin-right: 32rpx;
 }
 
 .settings-body {
@@ -392,19 +404,20 @@ export default {
 
 .settings-input-text {
 	width: 100%;
-	padding: 24rpx 32rpx;
+	height: 80rpx;
+	padding: 0 32rpx;
+	padding-right: 80rpx;
 	border: 3rpx solid #efebe9;
 	border-radius: 24rpx;
 	background: #fdf6ec;
 	font-size: 30rpx;
 	color: #2c1810;
-	min-height: 88rpx;
 	box-sizing: border-box;
 }
 
 .key-show-btn {
 	position: absolute;
-	right: 28rpx;
+	right: 20rpx;
 	top: 50%;
 	transform: translateY(-50%);
 	padding: 12rpx;
@@ -412,17 +425,21 @@ export default {
 	color: #a1887f;
 	display: flex;
 	align-items: center;
+	z-index: 10;
 }
 
 .settings-select {
-	padding: 20rpx 32rpx;
+	height: 80rpx;
+	line-height: 74rpx;
+	padding: 0 32rpx;
 	border: 3rpx solid #efebe9;
 	border-radius: 24rpx;
 	background: #fdf6ec;
 	font-size: 30rpx;
 	color: #2c1810;
 	min-width: 280rpx;
-	text-align: right;
+	text-align: center;
+	box-sizing: border-box;
 }
 
 .st-ok {

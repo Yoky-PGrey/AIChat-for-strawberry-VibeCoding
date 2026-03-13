@@ -1,13 +1,5 @@
 <template>
   <view class="home">
-    <!-- 侧边导航抽屉 -->
-    <SideDrawer
-      :open="drawerOpen"
-      :current-page="'home'"
-      @close="drawerOpen = false"
-      @navigate="handleNavigate"
-    />
-
     <!-- 顶部栏 -->
     <view class="topbar">
       <view class="topbar-menu" @tap="drawerOpen = true">
@@ -111,11 +103,18 @@
       <view class="voice-cancel">取消</view>
     </view>
 
+    <!-- 侧边导航抽屉 -->
+    <SideDrawer
+      :open="drawerOpen"
+      :current-page="'home'"
+      @close="drawerOpen = false"
+      @navigate="handleNavigate"
+    />
   </view>
 </template>
 
 <script>
-import { ref, onMounted, nextTick, computed } from 'vue'
+import { ref, onMounted, nextTick, computed, watch } from 'vue'
 import { useChatStore } from '../../store/chat.js'
 import { queryKnowledge, buildPrompt } from '../../utils/knowledge.js'
 import { streamChat } from '../../utils/llm/index.js'
@@ -143,6 +142,11 @@ export default {
       scrollToBottom()
     })
 
+    // 监听会话切换，自动滚动到底部
+    watch(() => store.sessionId, () => {
+      scrollToBottom()
+    })
+
     function scrollToBottom() {
       nextTick(() => {
         scrollTop.value = 99999 + Math.random()
@@ -153,9 +157,22 @@ export default {
       const text = inputTxt.value.trim()
       if (!text || store.isLoading) return
 
+      // 如果当前没有活跃会话，先创建一个
+      if (!store.sessionId) {
+        store.createNewSession()
+      }
+
+      const isFirstMessage = store.messages.length === 0
+      const currentSessionId = store.sessionId
+
       inputTxt.value = ''
       store.addUser(text)
       scrollToBottom()
+
+      // 如果是第一条消息，异步生成标题
+      if (isFirstMessage) {
+        generateTitle(currentSessionId, text)
+      }
 
       store.isLoading = true
       const assistantMsg = store.addAssistant()
@@ -188,6 +205,27 @@ export default {
       } catch (e) {
         store.setError(assistantMsg.id, '请求失败，请检查网络或配置')
         store.isLoading = false
+      }
+    }
+
+    /**
+     * 异步生成对话标题
+     */
+    async function generateTitle(sessionId, firstMsg) {
+      try {
+        await streamChat([{ role: 'user', content: firstMsg }], {
+          system: '你是一个对话标题生成助手。请根据用户提供的第一条对话内容，生成一个极其简练的标题。要求：1. 字数在8个字以内；2. 不要包含标点符号；3. 直接输出标题文本，不要包含“标题：”或任何解释性文字。',
+          model: store.currentModel,
+          config: store.activeConfig,
+          onDone: (full) => {
+            const title = full.trim().replace(/[《》「」『』【】]/g, '')
+            if (title) {
+              store.updateSessionTitle(sessionId, title)
+            }
+          }
+        })
+      } catch (e) {
+        console.error('Title generation failed:', e)
       }
     }
 
@@ -401,11 +439,12 @@ export default {
 }
 
 .msg.bot .msg-bubble {
-  background: #fffcf7;
+  background: transparent;
   color: #2c1810;
-  border-bottom-left-radius: 8rpx;
-  border: 3rpx solid #efebe9;
-  box-shadow: 0 4rpx 12rpx rgba(109, 76, 65, 0.05);
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  width: 100%;
 }
 
 .msg-time {
@@ -583,7 +622,7 @@ export default {
   position: fixed;
   inset: 0;
   background: rgba(44, 24, 16, 0.8);
-  z-index: 10000;
+  z-index: 1000;
   display: flex;
   flex-direction: column;
   align-items: center;
